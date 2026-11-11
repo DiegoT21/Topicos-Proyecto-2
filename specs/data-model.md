@@ -5,7 +5,7 @@
 | Entidad | Campos principales | Notas |
 |---|---|---|
 | `subjects` | id, name, active | Materias |
-| `tutors` | id, name, email, active | Email institucional único |
+| `tutors` | id, name, email, active, token | Email institucional único; `token` para publicar disponibilidad y ver su agenda |
 | `tutor_subjects` | tutor_id, subject_id | Relación N:M (RN-06) |
 | `students` | id, name, email | Email institucional único; `token` de acceso |
 | `availabilities` | id, tutor_id, start_at, end_at | Bloques publicados (RN-03). Se guardan como intervalos concretos (datetime), no por día de semana, para coincidir con `rules.validate_booking_window` |

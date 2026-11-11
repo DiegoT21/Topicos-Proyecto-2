@@ -6,7 +6,7 @@ Todas las fechas son datetime comparables entre sí (misma zona / ambas naive).
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Iterable, Optional, Protocol
 
 STATUS_CONFIRMED = "confirmada"
@@ -66,6 +66,40 @@ def find_conflict(
         if overlaps(start, end, b.start_at, b.end_at):
             return b
     return None
+
+
+def free_slots(
+    day: date,
+    availabilities: Iterable[_HasInterval],
+    bookings: Iterable,
+    session_minutes: int,
+    now: datetime,
+    min_notice_min: int = 60,
+) -> list[datetime]:
+    """Horas de inicio libres de un tutor en `day` (RF-05).
+
+    Parte cada bloque de disponibilidad en sesiones consecutivas de `session_minutes`, y descarta
+    las que no cumplen RN-04 (pasado / sin anticipación) o chocan con reservas activas (RN-01).
+    Se asume que cada bloque empieza y termina el mismo día.
+    """
+    delta = timedelta(minutes=session_minutes)
+    bookings = list(bookings)
+    slots: list[datetime] = []
+    for block in sorted(availabilities, key=lambda a: a.start_at):
+        if block.start_at.date() != day:
+            continue
+        cur = block.start_at
+        while cur + delta <= block.end_at:
+            end = cur + delta
+            try:
+                validate_booking_window(cur, end, now, [block], min_notice_min)
+            except BookingRuleError:
+                cur = end
+                continue
+            if find_conflict(cur, end, bookings) is None:
+                slots.append(cur)
+            cur = end
+    return slots
 
 
 def validate_booking_window(

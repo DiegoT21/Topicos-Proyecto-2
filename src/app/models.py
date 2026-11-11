@@ -35,6 +35,7 @@ class Tutor(Base):
     name: Mapped[str] = mapped_column(String(100))
     email: Mapped[str] = mapped_column(String(120), unique=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    token: Mapped[str] = mapped_column(String(64), unique=True, default=lambda: secrets.token_urlsafe(24))
     subjects: Mapped[list[Subject]] = relationship(secondary=tutor_subjects)
 
 

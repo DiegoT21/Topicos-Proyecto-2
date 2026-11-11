@@ -120,3 +120,38 @@ def test_anticipacion_exacta_permitida():
 
 def test_sin_disponibilidades():
     assert code_of(t(10), t(11), av=[]) == "outside_availability"
+
+
+# --- free_slots (RF-05) ---
+from datetime import date  # noqa: E402
+
+from app.rules import free_slots  # noqa: E402
+
+DAY = date(2026, 12, 1)
+
+
+def hours(slots):
+    return [s.hour for s in slots]
+
+
+def test_free_slots_parte_el_bloque_en_sesiones():
+    assert hours(free_slots(DAY, [Interval(t(9), t(13))], [], 60, NOW, 60)) == [9, 10, 11, 12]
+
+
+def test_free_slots_excluye_reservadas_y_canceladas_no():
+    bookings = [B(1, t(10), t(11)), B(2, t(11), t(12), "cancelada")]
+    assert hours(free_slots(DAY, [Interval(t(9), t(13))], bookings, 60, NOW, 60)) == [9, 11, 12]
+
+
+def test_free_slots_descarta_pasado_y_sin_anticipacion():
+    # NOW = 08:00, anticipación 60 -> la primera sesión válida empieza a las 09:00
+    assert hours(free_slots(DAY, [Interval(t(7), t(11))], [], 60, NOW, 60)) == [9, 10]
+
+
+def test_free_slots_bloque_que_no_cabe():
+    assert free_slots(DAY, [Interval(t(9), t(9, 30))], [], 60, NOW, 60) == []
+
+
+def test_free_slots_ignora_otros_dias():
+    other = Interval(datetime(2026, 12, 2, 9), datetime(2026, 12, 2, 13))
+    assert free_slots(DAY, [other], [], 60, NOW, 60) == []

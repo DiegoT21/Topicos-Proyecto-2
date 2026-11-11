@@ -14,6 +14,7 @@
 | RN-08 | Solo el estudiante dueño (o el admin) puede cancelar una reserva | Alta |
 | RN-09 | Estados válidos: `confirmada`, `cancelada`, `realizada`. Transiciones: confirmada → cancelada / realizada | Media |
 | RN-10 | Reactivar o reprogramar una reserva debe volver a validar RN-01 y RN-02 excluyendo la propia reserva (lección del hallazgo 1 del Proyecto 1) | Alta |
+| RN-12 | Los bloques de disponibilidad de un tutor no pueden solaparse entre sí, deben empezar y terminar el mismo día y ser futuros | Media |
 | RN-11 | Teléfono/correo con formato válido; nombre sin HTML | Media |
 
 ## Notas

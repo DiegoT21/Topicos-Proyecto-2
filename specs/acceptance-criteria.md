@@ -14,5 +14,7 @@
 | CA-08 | RN-08 | **Cuando** otro estudiante intenta cancelar una reserva ajena, **entonces** 403 | `tests/test_bookings_api.py`: test_cancelar_ajena_prohibido |
 | CA-09 | RN-10 | **Dado** una reserva cancelada cuyo espacio fue tomado por otro, **cuando** se intenta reactivar, **entonces** se rechaza con 409 | _pendiente_ |
 | CA-10 | RN-11 / RNF-02 | **Cuando** el nombre contiene HTML (`<img onerror=...>`), **entonces** se rechaza o se almacena escapado y nunca se ejecuta en pantalla | `tests/test_bookings_api.py`: test_nombre_con_html_rechazado |
-| CA-11 | RF-04 | **Cuando** se lista tutores por materia, **entonces** solo aparecen los tutores asignados a esa materia | _pendiente_ |
+| CA-11 | RF-04 | **Cuando** se lista tutores por materia, **entonces** solo aparecen los tutores asignados a esa materia | `tests/test_availability_api.py`: test_listar_tutores_por_materia |
+| CA-13 | RF-05 | **Dado** un tutor con un bloque 9:00–13:00, **cuando** se consultan sus espacios del día, **entonces** salen 4 sesiones de 60 min; las reservadas desaparecen y las canceladas reaparecen | `tests/test_availability_api.py`: test_espacios_libres_del_dia, test_reservado_desaparece_y_cancelar_lo_devuelve; `tests/test_rules.py`: free_slots |
+| CA-14 | RF-03 / RN-12 | **Cuando** el tutor publica un bloque que se solapa con otro suyo, **entonces** 409 | `tests/test_availability_api.py`: test_bloques_solapados_rechazados |
 | CA-12 | RF-10 | **Cuando** el admin filtra por tutor, materia, fecha o estado, **entonces** solo recibe las reservas que cumplen | _pendiente_ |
