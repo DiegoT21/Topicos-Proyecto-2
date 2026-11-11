@@ -10,7 +10,7 @@
 | POST | `/api/bookings/{id}/cancel` | Cancelar reserva → 200 / 403 / 404 / 409 (ya cancelada). Header `X-Student-Token` (dueño) o `X-Admin-Token` | RF-08 | estudiante / admin |
 | POST | `/api/tutor/availability` | Publicar bloque `{start_at, end_at}` → 201 / 409 solape / 422. Header `X-Tutor-Token` | RF-03 | tutor |
 | GET | `/api/tutor/agenda` | Agenda del tutor. Header `X-Tutor-Token` | RF-09 | tutor |
-| GET | `/api/admin/bookings?tutor_id&subject_id&date_from&date_to&status` | Reservas con filtros | RF-10 | admin |
+| GET | `/api/admin/bookings?tutor_id&subject_id&status&date_from&date_to&limit&offset` | Reservas con filtros combinables; incluye nombres de tutor, estudiante y materia (texto de usuario: escapar al mostrar). `date_from`/`date_to` inclusivos; `limit` 1–500 (100 por defecto). 422 si el estado es inválido o el rango está invertido | RF-10 | admin |
 | POST | `/api/admin/subjects`, `/api/admin/tutors` | Crear materia / tutor (el tutor se crea con `subject_ids` y devuelve su `token`). Header `X-Admin-Token` | RF-01, RF-02 | admin |
 | DELETE | `/api/admin/subjects/{id}` | Desactiva la materia (no la borra) | RF-01 | admin |
 

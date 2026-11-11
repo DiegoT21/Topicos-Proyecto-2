@@ -121,6 +121,21 @@ class BookingCreate(BaseModel):
         return v
 
 
+class AdminBookingOut(BaseModel):
+    """Reserva con nombres, para el listado del admin. Los nombres son texto de usuario: escapar al mostrarlos."""
+
+    id: int
+    tutor_id: int
+    tutor_name: str
+    student_id: int
+    student_name: str
+    subject_id: int
+    subject_name: str
+    start_at: datetime
+    end_at: datetime
+    status: str
+
+
 class BookingOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
