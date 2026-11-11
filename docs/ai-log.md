@@ -7,6 +7,7 @@ Decisión humana: **Aceptada**, **Aceptada parcialmente**, **Modificada** (qué 
 | # | Fecha | Quién | Actividad | IA utilizada | Solicitud | Resultado | Decisión |
 |---|---|---|---|---|---|---|---|
 | 1 | 2026-11-11 | Diego | Lectura del enunciado y del Proyecto 1; elección de dominio | Claude Code | Resumir reglas del Proyecto 2, comparar dominios y proponer estructura | Recomendó tutorías universitarias; creó estructura y borradores de `specs/` | **Aceptada parcialmente**: dominio aceptado; los borradores deben revisarse con el grupo |
+| 2 | 2026-11-11 | Diego | Reparto de roles/issues y núcleo de reglas (issue #1) | Claude Code | Repartir el trabajo entre 3 roles; implementar `rules.py` y pruebas unitarias desde las specs | `docs/team-plan.md`, `rules.py` y 19 pruebas; 19 passed (`docs/evidencia/pytest_nucleo_reglas.txt`) | **Aceptada**: Diego debe revisar el código antes del PR; Omar revisa |
 
 ## 2. Respuestas incorrectas de la IA
 | Fecha | Qué se pidió | Qué respondió mal | Cómo se detectó | Corrección | Evidencia |
