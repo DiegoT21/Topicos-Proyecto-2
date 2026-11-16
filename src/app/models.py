@@ -35,6 +35,7 @@ class Tutor(Base):
     name: Mapped[str] = mapped_column(String(100))
     email: Mapped[str] = mapped_column(String(120), unique=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    token: Mapped[str] = mapped_column(String(64), unique=True, default=lambda: secrets.token_urlsafe(24))
     subjects: Mapped[list[Subject]] = relationship(secondary=tutor_subjects)
 
 
@@ -50,11 +51,15 @@ class Availability(Base):
     """Bloque publicado por el tutor (RN-03)."""
 
     __tablename__ = "availabilities"
-    __table_args__ = (CheckConstraint("end_at > start_at", name="ck_availability_interval"),)
+    __table_args__ = (
+        CheckConstraint("end_at > start_at", name="ck_availability_interval"),
+        CheckConstraint("capacity BETWEEN 1 AND 6", name="ck_availability_capacity"),  # RN-13
+    )
     id: Mapped[int] = mapped_column(primary_key=True)
     tutor_id: Mapped[int] = mapped_column(ForeignKey("tutors.id"))
     start_at: Mapped[datetime] = mapped_column(DateTime)
     end_at: Mapped[datetime] = mapped_column(DateTime)
+    capacity: Mapped[int] = mapped_column(Integer, default=1)  # cupo por sesión, 1 = individual (RN-13)
 
 
 class Booking(Base):
