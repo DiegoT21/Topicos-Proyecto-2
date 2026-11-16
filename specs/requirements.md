@@ -15,6 +15,7 @@
 | RF-08 | El estudiante cancela su reserva y el espacio queda libre | Estudiante | Alta |
 | RF-09 | El tutor ve su agenda de sesiones | Tutor | Media |
 | RF-10 | El administrador consulta reservas con filtros (tutor, materia, fecha, estado) | Admin | Media |
+| RF-11 | El estudiante ve los espacios libres de todos los tutores de una materia en una fecha y elige por hora (antes B-10) | Estudiante | Alta |
 
 ## Requisitos no funcionales
 | ID | Requisito |
@@ -30,9 +31,9 @@ Requisitos detectados al revisar las specs contra el código y la encuesta del O
 
 | Orden | ID | Requisito | Prioridad | Motivo | Origen |
 |---|---|---|---|---|---|
-| 1 | B-01 | Aceptar solo correos del dominio institucional (`@utp.ac.pa`) | Alta | Hace cumplir la decisión de autenticación; hoy el código la contradice | `decisions.md` D-01 |
-| 2 | B-04 | Rechazar reservas cuyo inicio no coincida con un espacio de `free_slots` | Alta | Evita que una reserva bloquee dos espacios del tutor (desperdicio que el outcome quiere eliminar) | `decisions.md` E-02 |
-| 3 | B-10 | El estudiante ve los espacios libres de **todos** los tutores de una materia en una fecha y elige por hora | Alta | Sin esto no se cumple el indicador "≤ 3 pasos para reservar" (materia → espacio → confirmar); la hora es el criterio más mencionado (4 de 5) | Encuesta; `outcomes.md` |
+| 1 | B-01 | ✅ **Hecho** (rama `fix/decisiones-victor`, RN-11, CA-16). Aceptar solo correos del dominio institucional (`@utp.ac.pa`) | Alta | Hace cumplir la decisión de autenticación; hoy el código la contradice | `decisions.md` D-01 |
+| 2 | B-04 | ✅ **Hecho** (rama `fix/decisiones-victor`, RN-03, CA-15). Rechazar reservas cuyo inicio no coincida con un espacio de `free_slots` | Alta | Evita que una reserva bloquee dos espacios del tutor (desperdicio que el outcome quiere eliminar) | `decisions.md` E-02 |
+| 3 | B-10 | ✅ **Hecho**: pasa a RF-11 (CA-17). El estudiante ve los espacios libres de **todos** los tutores de una materia en una fecha y elige por hora | Alta | Sin esto no se cumple el indicador "≤ 3 pasos para reservar" (materia → espacio → confirmar); la hora es el criterio más mencionado (4 de 5) | Encuesta; `outcomes.md` |
 | 4 | B-11 | Sesiones grupales con cupo (máximo configurable por sesión) | Media — **candidato 1** | La aceptan 6 de 8 encuestados (grupos de 3 a 6) | Encuesta; `outcomes.md` §7 |
 | 5 | B-06 | Gestión de la sesión por el tutor: marcar realizada, marcar inasistencia y cancelar | Media — **candidato 2** | La piden los 3 tutores y da uso al estado `realizada` (RN-09), hoy sin flujo | `decisions.md` E-06; encuesta (3 de 3 tutores) |
 | 6 | B-05 | Cada tutor define su anticipación mínima (el valor global de 1 h queda como valor por defecto) | Media — **candidato 3** | Los 3 tutores piden más de 1 h y no coinciden entre sí | `decisions.md` E-04; encuesta (3 de 3 tutores) |

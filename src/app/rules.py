@@ -68,6 +68,23 @@ def find_conflict(
     return None
 
 
+def validate_slot_alignment(start: datetime, availabilities: Iterable[_HasInterval], session_minutes: int) -> None:
+    """RN-03 (decisión E-02): el inicio debe coincidir con un espacio del bloque que lo contiene.
+
+    Con bloque 9:00-13:00 y sesiones de 60 min, solo valen 9:00, 10:00, 11:00 y 12:00; las 10:30 no,
+    porque bloquearía dos espacios del tutor. Si `start` no cae en ningún bloque no hace nada:
+    eso ya lo rechaza `validate_booking_window` con "outside_availability".
+    """
+    step = session_minutes * 60
+    for block in availabilities:
+        if block.start_at <= start < block.end_at:
+            if (start - block.start_at).total_seconds() % step != 0:
+                raise BookingRuleError(
+                    "not_a_slot", "La hora de inicio no coincide con un espacio publicado por el tutor"
+                )
+            return
+
+
 def free_slots(
     day: date,
     availabilities: Iterable[_HasInterval],

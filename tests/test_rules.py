@@ -118,6 +118,31 @@ def test_sin_disponibilidades():
     assert code_of(t(10), t(11), av=[]) == "outside_availability"
 
 
+# --- validate_slot_alignment (RN-03 / E-02, B-04) ---
+from app.rules import validate_slot_alignment  # noqa: E402
+
+
+def test_alineado_al_espacio():
+    for h in (9, 10, 11, 12):
+        validate_slot_alignment(t(h), [Interval(t(9), t(13))], 60)
+
+
+def test_no_alineado_rechazado():
+    with pytest.raises(BookingRuleError) as e:
+        validate_slot_alignment(t(10, 30), [Interval(t(9), t(13))], 60)
+    assert e.value.code == "not_a_slot"
+
+
+def test_alineacion_relativa_al_inicio_del_bloque():
+    validate_slot_alignment(t(10, 30), [Interval(t(9, 30), t(13, 30))], 60)  # 9:30, 10:30...
+    with pytest.raises(BookingRuleError):
+        validate_slot_alignment(t(10), [Interval(t(9, 30), t(13, 30))], 60)
+
+
+def test_fuera_de_bloque_no_decide():
+    validate_slot_alignment(t(15, 10), [Interval(t(9), t(13))], 60)  # lo rechaza validate_booking_window
+
+
 # --- free_slots (RF-05) ---
 from datetime import date
 

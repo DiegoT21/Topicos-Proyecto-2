@@ -9,6 +9,14 @@ from .config import settings
 _HTML = re.compile(r"[<>]")
 
 
+def institutional_email(v: str) -> str:
+    """RN-11 / D-01 (B-01): solo correos del dominio institucional. Se guarda en minúsculas."""
+    v = v.strip().lower()
+    if not v.endswith("@" + settings.institutional_domain):
+        raise ValueError(f"Solo se aceptan correos @{settings.institutional_domain}")
+    return v
+
+
 class StudentCreate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     email: str = Field(max_length=120, pattern=r"^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$")
@@ -20,6 +28,16 @@ class StudentCreate(BaseModel):
         if _HTML.search(v):
             raise ValueError("El nombre no puede contener HTML")
         return v
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize(cls, v):
+        return v.strip().lower() if isinstance(v, str) else v
+
+    @field_validator("email")
+    @classmethod
+    def domain(cls, v: str) -> str:
+        return institutional_email(v)
 
 
 class StudentOut(BaseModel):
@@ -65,6 +83,16 @@ class TutorCreate(BaseModel):
     def clean(cls, v: str) -> str:
         return _clean_name(v)
 
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize(cls, v):
+        return v.strip().lower() if isinstance(v, str) else v
+
+    @field_validator("email")
+    @classmethod
+    def domain(cls, v: str) -> str:
+        return institutional_email(v)
+
 
 class TutorPublic(BaseModel):
     """Lo que ve cualquier estudiante: sin correo ni token."""
@@ -98,6 +126,21 @@ class AvailabilityOut(BaseModel):
     tutor_id: int
     start_at: datetime
     end_at: datetime
+
+
+class SubjectSlot(BaseModel):
+    tutor_id: int
+    tutor_name: str
+    start_at: datetime
+
+
+class SubjectSlotsOut(BaseModel):
+    """B-10: espacios libres de todos los tutores de una materia en un día, ordenados por hora."""
+
+    subject_id: int
+    date: str
+    session_minutes: int
+    slots: list[SubjectSlot]
 
 
 class SlotsOut(BaseModel):

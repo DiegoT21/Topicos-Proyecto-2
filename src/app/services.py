@@ -12,7 +12,14 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .config import local_now, settings
-from .rules import STATUS_CANCELLED, STATUS_CONFIRMED, BookingRuleError, find_conflict, validate_booking_window
+from .rules import (
+    STATUS_CANCELLED,
+    STATUS_CONFIRMED,
+    BookingRuleError,
+    find_conflict,
+    validate_booking_window,
+    validate_slot_alignment,
+)
 
 _book_lock = threading.Lock()
 
@@ -48,6 +55,7 @@ def book(
 
         availabilities = db.query(models.Availability).filter_by(tutor_id=tutor_id).all()
         validate_booking_window(start_at, end_at, now, availabilities, settings.min_notice_minutes)  # RN-03, RN-04
+        validate_slot_alignment(start_at, availabilities, settings.session_minutes)  # RN-03 / E-02 (B-04)
 
         if find_conflict(start_at, end_at, _active_overlapping(db, models.Booking.tutor_id, tutor_id, start_at, end_at)):
             raise BookingRuleError("tutor_conflict", "El tutor ya tiene una sesión en ese horario")  # RN-01

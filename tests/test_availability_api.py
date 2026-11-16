@@ -179,3 +179,53 @@ def test_flujo_completo_reserva_en_espacio_publicado(c):
     r2 = c.post("/api/bookings", headers={"X-Student-Token": student(c, "Eva", "eva@utp.ac.pa")},
                 json={"tutor_id": tu["id"], "subject_id": sid, "start_at": first})
     assert r2.status_code == 409
+
+
+# --- B-01: correo institucional también para tutores ---
+def test_tutor_con_correo_no_institucional_422(c):  # CA-16
+    r = c.post("/api/admin/tutors", json={"name": "Ana", "email": "ana@hotmail.com"}, headers=ADMIN)
+    assert r.status_code == 422
+
+
+# --- B-10: espacios libres de todos los tutores de una materia ---
+def test_espacios_por_materia_de_todos_los_tutores(c):  # CA-17
+    math, phys = subject(c), subject(c, "Física")
+    ana = tutor(c, "Ana", "ana@utp.ac.pa", [math])
+    bea = tutor(c, "Bea", "bea@utp.ac.pa", [math])
+    otro = tutor(c, "Ciro", "ciro@utp.ac.pa", [phys])
+    publish(c, ana["token"], t(9), t(11))
+    publish(c, bea["token"], t(10), t(12))
+    publish(c, otro["token"], t(9), t(12))  # otra materia: no debe salir
+    r = c.get(f"/api/subjects/{math}/slots?date=2099-01-05")
+    assert r.status_code == 200
+    got = [(s["start_at"][11:16], s["tutor_name"]) for s in r.json()["slots"]]
+    assert got == [("09:00", "Ana"), ("10:00", "Ana"), ("10:00", "Bea"), ("11:00", "Bea")]
+
+
+def test_espacios_por_materia_excluye_reservados(c):  # CA-17
+    math = subject(c)
+    ana = tutor(c, "Ana", "ana@utp.ac.pa", [math])
+    publish(c, ana["token"], t(9), t(11))
+    c.post("/api/bookings", headers={"X-Student-Token": student(c)},
+           json={"tutor_id": ana["id"], "subject_id": math, "start_at": t(9)})
+    got = [s["start_at"][11:16] for s in c.get(f"/api/subjects/{math}/slots?date=2099-01-05").json()["slots"]]
+    assert got == ["10:00"]
+
+
+def test_espacios_por_materia_inexistente_o_inactiva_404(c):
+    assert c.get("/api/subjects/99/slots?date=2099-01-05").status_code == 404
+    sid = subject(c)
+    c.delete(f"/api/admin/subjects/{sid}", headers=ADMIN)
+    assert c.get(f"/api/subjects/{sid}/slots?date=2099-01-05").status_code == 404
+
+
+def test_flujo_tres_pasos_materia_espacio_confirmar(c):  # indicador "≤ 3 pasos" de outcomes.md
+    math = subject(c)
+    ana = tutor(c, "Ana", "ana@utp.ac.pa", [math])
+    publish(c, ana["token"], t(9), t(11))
+    tok = student(c)
+    materias = c.get("/api/subjects").json()                                          # 1. materia
+    espacio = c.get(f"/api/subjects/{materias[0]['id']}/slots?date=2099-01-05").json()["slots"][0]  # 2. espacio
+    r = c.post("/api/bookings", headers={"X-Student-Token": tok},                     # 3. confirmar
+               json={"tutor_id": espacio["tutor_id"], "subject_id": materias[0]["id"], "start_at": espacio["start_at"]})
+    assert r.status_code == 201

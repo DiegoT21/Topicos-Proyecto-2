@@ -89,12 +89,17 @@ def test_mismo_tutor_mismo_horario_409(env):  # CA-02, RN-01
     assert r.status_code == 409 and r.json()["detail"]["code"] == "tutor_conflict"
 
 
-def test_mismo_tutor_solape_parcial_409(env):  # CA-02, RN-01: 10:30 overlaps the 10:00-11:00 session
-    c, _, i = env
+def test_mismo_tutor_solape_parcial_rechazado(env):  # CA-02, RN-01 + RN-03/E-02
+    """Ajustada por B-04 (decisión E-02): 10:30 ya no es un espacio válido, así que se rechaza
+    con 422 antes de llegar al chequeo de solape. Lo importante para RN-01 se mantiene: no se crea
+    una segunda reserva del tutor. El solape parcial en sí se prueba en tests/test_rules.py."""
+    c, Session, i = env
     a, b = register(c, "Luis", "luis@utp.ac.pa"), register(c, "Eva", "eva@utp.ac.pa")
     assert book(c, a, i["ana"], i["math"], t(10)).status_code == 201
     r = book(c, b, i["ana"], i["math"], t(10, 30))
-    assert r.status_code == 409 and r.json()["detail"]["code"] == "tutor_conflict"
+    assert r.status_code == 422 and r.json()["detail"]["code"] == "not_a_slot"
+    with Session() as s:
+        assert s.query(models.Booking).filter_by(tutor_id=i["ana"]).count() == 1
 
 
 def test_sesiones_consecutivas_permitidas(env):  # CA-03: [10,11) and [11,12) do not overlap
