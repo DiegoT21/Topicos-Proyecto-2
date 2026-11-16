@@ -118,6 +118,46 @@ def test_sin_disponibilidades():
     assert code_of(t(10), t(11), av=[]) == "outside_availability"
 
 
+# --- seats_left (RN-01 reformulada + RN-13, cambio 2026-11-16) ---
+from app.rules import seats_left  # noqa: E402
+
+
+@dataclass
+class BS:
+    id: int
+    start_at: datetime
+    end_at: datetime
+    subject_id: int = 1
+    status: str = "confirmada"
+
+
+def test_cupos_sin_reservas():
+    assert seats_left(t(10), t(11), 3, []) == 3
+
+
+def test_cupos_misma_sesion_y_materia():
+    assert seats_left(t(10), t(11), 3, [BS(1, t(10), t(11)), BS(2, t(10), t(11))], subject_id=1) == 1
+
+
+def test_cupos_no_negativos_y_canceladas_no_cuentan():
+    full = [BS(n, t(10), t(11)) for n in range(4)]
+    assert seats_left(t(10), t(11), 3, full) == 0
+    assert seats_left(t(10), t(11), 3, [BS(1, t(10), t(11), status="cancelada")]) == 3
+
+
+def test_otra_materia_ocupa_la_sesion():
+    assert seats_left(t(10), t(11), 3, [BS(1, t(10), t(11), subject_id=2)], subject_id=1) == 0
+
+
+def test_solape_con_otra_sesion_no_deja_cupo():
+    assert seats_left(t(10), t(11), 3, [BS(1, t(10, 30), t(11, 30))]) == 0
+
+
+def test_cupo_1_equivale_a_la_regla_original():
+    assert seats_left(t(10), t(11), 1, [BS(1, t(10), t(11))]) == 0
+    assert seats_left(t(11), t(12), 1, [BS(1, t(10), t(11))]) == 1  # consecutiva
+
+
 # --- validate_slot_alignment (RN-03 / E-02, B-04) ---
 from app.rules import validate_slot_alignment  # noqa: E402
 

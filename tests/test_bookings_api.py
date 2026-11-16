@@ -180,3 +180,24 @@ def test_email_duplicado_409(env):
     c, _ = env
     register(c, "Luis", "luis@utp.ac.pa")
     assert c.post("/api/students", json={"name": "Otro", "email": "LUIS@utp.ac.pa"}).status_code == 409
+
+
+# --- endpoints que usa la interfaz web ---
+def test_students_me_y_mis_reservas(env):
+    c, i = env
+    tok = register(c, "Luis", "luis@utp.ac.pa")
+    me = c.get("/api/students/me", headers={"X-Student-Token": tok}).json()
+    assert me["name"] == "Luis" and "token" not in me
+    bid = book(c, tok, i["ana"], i["math"], t(10)).json()["id"]
+    otro = register(c, "Eva", "eva@utp.ac.pa")
+    book(c, otro, i["bea"], i["math"], t(11))
+    mine = c.get("/api/bookings/mine", headers={"X-Student-Token": tok}).json()
+    assert [b["id"] for b in mine] == [bid]  # solo las propias
+    assert mine[0]["tutor_name"] == "Ana" and mine[0]["subject_name"] == "Cálculo I"
+    assert c.get("/api/bookings/mine").status_code == 401
+
+
+def test_interfaz_web_se_sirve(client):
+    for page in ("/", "/tutor.html", "/admin.html", "/app.js", "/styles.css"):
+        assert client.get(page).status_code == 200, page
+    assert "innerHTML" not in client.get("/app.js").text  # RNF-02: no se inserta HTML con datos
