@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     business_timezone: str = "America/Panama"
     session_minutes: int = 60          # RN-05
     min_notice_minutes: int = 60       # RN-04
-    admin_token: str = "cambia-este-token-admin"
+    admin_token: str = "cambia-este-token-admin"  # D-03: solo desarrollo; definir ADMIN_TOKEN en .env
+    institutional_domain: str = "utp.ac.pa"       # D-01 / B-01
 
 
 settings = Settings()

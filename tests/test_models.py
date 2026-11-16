@@ -1,26 +1,11 @@
 """Pruebas de modelos y restricciones (issue #2, specs/data-model.md)."""
-import sys
 from datetime import datetime
-from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from app import models  # noqa: E402
-from app.database import Base  # noqa: E402
-from app.rules import find_conflict  # noqa: E402
-
-
-@pytest.fixture()
-def db():
-    engine = create_engine("sqlite://")  # en memoria: sin archivos, compatible con Windows
-    Base.metadata.create_all(engine)
-    with Session(engine) as s:
-        yield s
+from app import models
+from app.rules import find_conflict
 
 
 def t(h):

@@ -1,0 +1,33 @@
+........................................................................ [ 65%]
+......................................                                   [100%]
+============================== warnings summary ===============================
+.venv\Lib\site-packages\starlette\formparsers.py:12
+  C:\Users\diego\Desktop\Carpetas\UTP\Topicos\Proyecto2\.venv\Lib\site-packages\starlette\formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+.venv\Lib\site-packages\starlette\testclient.py:41
+  C:\Users\diego\Desktop\Carpetas\UTP\Topicos\Proyecto2\.venv\Lib\site-packages\starlette\testclient.py:41: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    [], typing.ContextManager[anyio.abc.BlockingPortal]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+
+---------- coverage: platform win32, python 3.12.10-final-0 ----------
+Name                          Stmts   Miss  Cover
+-------------------------------------------------
+src\app\__init__.py               0      0   100%
+src\app\config.py                14      0   100%
+src\app\database.py              13      4    69%
+src\app\main.py                  22      3    86%
+src\app\models.py                47      0   100%
+src\app\routers\__init__.py       0      0   100%
+src\app\routers\admin.py         63      1    98%
+src\app\routers\bookings.py      51      1    98%
+src\app\routers\catalog.py       45      0   100%
+src\app\routers\tutor.py         31      0   100%
+src\app\rules.py                 83      1    99%
+src\app\schemas.py              148      2    99%
+src\app\services.py              51      3    94%
+-------------------------------------------------
+TOTAL                           568     15    97%
+
+110 passed, 2 warnings in 9.01s

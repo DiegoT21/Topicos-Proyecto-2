@@ -9,6 +9,14 @@ from .config import settings
 _HTML = re.compile(r"[<>]")
 
 
+def institutional_email(v: str) -> str:
+    """RN-11 / D-01 (B-01): solo correos del dominio institucional. Se guarda en minúsculas."""
+    v = v.strip().lower()
+    if not v.endswith("@" + settings.institutional_domain):
+        raise ValueError(f"Solo se aceptan correos @{settings.institutional_domain}")
+    return v
+
+
 class StudentCreate(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     email: str = Field(max_length=120, pattern=r"^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$")
@@ -20,6 +28,23 @@ class StudentCreate(BaseModel):
         if _HTML.search(v):
             raise ValueError("El nombre no puede contener HTML")
         return v
+
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize(cls, v):
+        return v.strip().lower() if isinstance(v, str) else v
+
+    @field_validator("email")
+    @classmethod
+    def domain(cls, v: str) -> str:
+        return institutional_email(v)
+
+
+class StudentPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    email: str
 
 
 class StudentOut(BaseModel):
@@ -65,6 +90,16 @@ class TutorCreate(BaseModel):
     def clean(cls, v: str) -> str:
         return _clean_name(v)
 
+    @field_validator("email", mode="before")
+    @classmethod
+    def normalize(cls, v):
+        return v.strip().lower() if isinstance(v, str) else v
+
+    @field_validator("email")
+    @classmethod
+    def domain(cls, v: str) -> str:
+        return institutional_email(v)
+
 
 class TutorPublic(BaseModel):
     """Lo que ve cualquier estudiante: sin correo ni token."""
@@ -83,6 +118,7 @@ class TutorCreatedOut(TutorPublic):
 class AvailabilityCreate(BaseModel):
     start_at: datetime
     end_at: datetime
+    capacity: int = Field(1, ge=1, le=6)  # RN-13: cupo por sesión (1 = individual)
 
     @field_validator("start_at", "end_at")
     @classmethod
@@ -98,6 +134,30 @@ class AvailabilityOut(BaseModel):
     tutor_id: int
     start_at: datetime
     end_at: datetime
+    capacity: int
+
+
+class SubjectSlot(BaseModel):
+    tutor_id: int
+    tutor_name: str
+    start_at: datetime
+    seats_left: int  # RN-13
+    capacity: int
+
+
+class SubjectSlotsOut(BaseModel):
+    """B-10: espacios libres de todos los tutores de una materia en un día, ordenados por hora."""
+
+    subject_id: int
+    date: str
+    session_minutes: int
+    slots: list[SubjectSlot]
+
+
+class SlotSeats(BaseModel):
+    start_at: datetime
+    seats_left: int
+    capacity: int
 
 
 class SlotsOut(BaseModel):
@@ -105,6 +165,7 @@ class SlotsOut(BaseModel):
     date: str
     session_minutes: int
     slots: list[datetime]
+    seats: list[SlotSeats]  # mismo orden que `slots`, con cupos (RN-13)
 
 
 class BookingCreate(BaseModel):

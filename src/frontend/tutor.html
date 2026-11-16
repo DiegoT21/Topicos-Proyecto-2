@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi disponibilidad · TutoríasUTP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Unbounded:wght@600&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <p class="brand">TutoríasUTP</p>
+    <nav aria-label="Secciones">
+      <a href="index.html">Reservar</a>
+      <a href="tutor.html" aria-current="page">Soy tutor</a>
+      <a href="admin.html">Coordinación</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Publica tus horas de tutoría</h1>
+    <p class="lead">Cada bloque se divide en sesiones de una hora que los estudiantes reservan directamente.</p>
+
+    <section class="panel" id="access">
+      <h2>Tu código de tutor</h2>
+      <form id="token-form" class="row">
+        <div class="field"><label for="token">Código</label><input id="token" required autocomplete="off"></div>
+        <button type="submit">Usar este código</button>
+      </form>
+      <p class="hint">Coordinación te entrega este código al registrarte.</p>
+      <p class="msg" id="access-msg" role="status"></p>
+    </section>
+
+    <section class="panel" id="publish" hidden>
+      <h2>Agregar un bloque</h2>
+      <form id="block-form" class="row">
+        <div class="field"><label for="day">Día</label><input id="day" type="date" required></div>
+        <div class="field"><label for="from">Desde</label><input id="from" type="time" step="900" required value="09:00"></div>
+        <div class="field"><label for="to">Hasta</label><input id="to" type="time" step="900" required value="12:00"></div>
+        <div class="field"><label for="capacity">Estudiantes por sesión</label>
+          <select id="capacity"><option value="1">1 (individual)</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+        <button type="submit">Publicar bloque</button>
+      </form>
+      <p class="msg" id="block-msg" role="status"></p>
+    </section>
+
+    <section class="panel" id="agenda-panel" hidden>
+      <h2>Mi agenda</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Día</th><th>Hora</th><th>Materia</th><th>Estado</th></tr></thead>
+          <tbody id="agenda"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="agenda-empty" hidden>Todavía nadie ha reservado. Tus bloques publicados ya aparecen para los estudiantes.</p>
+      <button type="button" class="secondary" id="forget">Olvidar el código en este navegador</button>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  let token = store.get("tutor_token");
+  let subjects = new Map();
+
+  async function start() {
+    const ok = !!token;
+    $("access").hidden = ok; $("publish").hidden = !ok; $("agenda-panel").hidden = !ok;
+    if (!ok) return;
+    $("day").min = todayLocal();
+    if (!$("day").value) $("day").value = todayLocal();
+    try {
+      subjects = new Map((await api("/api/subjects")).map((s) => [s.id, s.name]));
+      await loadAgenda();
+    } catch (err) {
+      store.del("tutor_token"); token = null; start();
+      show($("access-msg"), `${err.message}. Revisa el código que te dio coordinación.`, "err"); // antes: alert() bloqueante (QA)
+    }
+  }
+
+  $("token-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    token = $("token").value.trim(); store.set("tutor_token", token); start();
+  });
+
+  $("block-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const day = $("day").value;
+    try {
+      await api("/api/tutor/availability", { method: "POST", headers: { "X-Tutor-Token": token },
+        body: { start_at: `${day}T${$("from").value}:00`, end_at: `${day}T${$("to").value}:00`, capacity: Number($("capacity").value) } });
+      const cupo = $("capacity").value === "1" ? "individual" : `grupal, ${$("capacity").value} estudiantes por sesión`;
+      show($("block-msg"), `Bloque publicado: ${prettyDate(day)}, de ${$("from").value} a ${$("to").value} (${cupo}).`, "ok");
+    } catch (err) { show($("block-msg"), err.message, "err"); }
+  });
+
+  async function loadAgenda() {
+    const rows = await api("/api/tutor/agenda", { headers: { "X-Tutor-Token": token } });
+    const body = $("agenda");
+    body.replaceChildren();
+    $("agenda-empty").hidden = rows.length > 0;
+    for (const b of rows) {
+      const tr = el("tr");
+      tr.append(el("td", prettyDate(dateOf(b.start_at))), el("td", hourOf(b.start_at)),
+        el("td", subjects.get(b.subject_id) || "Materia inactiva"), el("td", b.status, { class: `status ${b.status}` }));
+      body.append(tr);
+    }
+  }
+
+  $("forget").addEventListener("click", () => { store.del("tutor_token"); token = null; start(); });
+  start();
+  </script>
+</body>
+</html>

@@ -1,20 +1,10 @@
 """RF-10 / CA-12: listado de reservas del admin con filtros."""
-import sys
 from datetime import datetime
-from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from app import models  # noqa: E402
-from app.config import settings  # noqa: E402
-from app.database import Base, get_db  # noqa: E402
-from app.main import app  # noqa: E402
+from app import models
+from app.config import settings
 
 ADMIN = {"X-Admin-Token": settings.admin_token}
 
@@ -24,21 +14,9 @@ def d(day, h):
 
 
 @pytest.fixture()
-def env():
+def env(session_factory, client):
     """4 reservas: Ana/Cálculo (5 y 6 ene), Bea/Física (5 ene), Ana/Cálculo cancelada (7 ene)."""
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine, expire_on_commit=False)
-
-    def override():
-        s = Session()
-        try:
-            yield s
-        finally:
-            s.close()
-
-    app.dependency_overrides[get_db] = override
-    s = Session()
+    s = session_factory()
     calc, fis = models.Subject(name="Cálculo I"), models.Subject(name="Física")
     ana = models.Tutor(name="Ana", email="ana@utp.ac.pa", subjects=[calc])
     bea = models.Tutor(name="Bea", email="bea@utp.ac.pa", subjects=[fis])
@@ -57,8 +35,7 @@ def env():
     s.commit()
     ids = {"ana": ana.id, "bea": bea.id, "calc": calc.id, "fis": fis.id}
     s.close()
-    yield TestClient(app), ids
-    app.dependency_overrides.clear()
+    yield client, ids
 
 
 def get(c, **params):

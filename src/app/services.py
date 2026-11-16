@@ -12,7 +12,15 @@ from sqlalchemy.orm import Session
 
 from . import models
 from .config import local_now, settings
-from .rules import STATUS_CANCELLED, STATUS_CONFIRMED, BookingRuleError, find_conflict, validate_booking_window
+from .rules import (
+    STATUS_CANCELLED,
+    STATUS_CONFIRMED,
+    BookingRuleError,
+    find_conflict,
+    seats_left,
+    validate_booking_window,
+    validate_slot_alignment,
+)
 
 _book_lock = threading.Lock()
 
@@ -48,9 +56,19 @@ def book(
 
         availabilities = db.query(models.Availability).filter_by(tutor_id=tutor_id).all()
         validate_booking_window(start_at, end_at, now, availabilities, settings.min_notice_minutes)  # RN-03, RN-04
+        validate_slot_alignment(start_at, availabilities, settings.session_minutes)  # RN-03 / E-02 (B-04)
 
-        if find_conflict(start_at, end_at, _active_overlapping(db, models.Booking.tutor_id, tutor_id, start_at, end_at)):
-            raise BookingRuleError("tutor_conflict", "El tutor ya tiene una sesión en ese horario")  # RN-01
+        # RN-01 reformulada + RN-13 (cambio 2026-11-16): varias reservas de la misma sesión hasta el cupo.
+        block = next(a for a in availabilities if a.start_at <= start_at and end_at <= a.end_at)
+        tutor_bookings = _active_overlapping(db, models.Booking.tutor_id, tutor_id, start_at, end_at)
+        same_session = all(b.start_at == start_at and b.end_at == end_at and b.subject_id == subject_id
+                           for b in tutor_bookings)
+        if not same_session:  # otra sesión solapada u otra materia en la misma sesión (G-02)
+            raise BookingRuleError("tutor_conflict", "El tutor ya tiene una sesión en ese horario")
+        if seats_left(start_at, end_at, block.capacity, tutor_bookings, subject_id) == 0:
+            if block.capacity == 1:  # sesión individual: mismo contrato que antes del cambio (CA-02)
+                raise BookingRuleError("tutor_conflict", "El tutor ya tiene una sesión en ese horario")
+            raise BookingRuleError("session_full", "La sesión grupal ya no tiene cupos")  # RN-13
         if find_conflict(start_at, end_at, _active_overlapping(db, models.Booking.student_id, student.id, start_at, end_at)):
             raise BookingRuleError("student_conflict", "Ya tienes una sesión en ese horario")  # RN-02
 
