@@ -136,8 +136,11 @@
         li.append(el("span", h, { class: "hour" }));
         const opts = el("div", null, { class: "options" });
         for (const s of list) {
+          const group = s.capacity > 1;
+          const seats = group ? `${s.seats_left} ${s.seats_left === 1 ? "cupo" : "cupos"} de ${s.capacity}` : "";
           const b = el("button", s.tutor_name, { type: "button", class: "slot", "aria-pressed": "false",
-            "aria-label": `${h} con ${s.tutor_name}` });
+            "aria-label": group ? `${h} con ${s.tutor_name}, grupal, ${seats}` : `${h} con ${s.tutor_name}` });
+          if (group) b.append(el("small", `Grupal, ${seats}`, { class: "seats" }));
           b.addEventListener("click", () => pick(s, b));
           opts.append(b);
         }
@@ -151,7 +154,8 @@
     document.querySelectorAll(".slot[aria-pressed='true']").forEach((b) => b.setAttribute("aria-pressed", "false"));
     button.setAttribute("aria-pressed", "true");
     chosen = slot;
-    $("confirm-text").textContent = `${prettyDate(dateOf(slot.start_at))}, ${hourOf(slot.start_at)} con ${slot.tutor_name}`;
+    const kind = slot.capacity > 1 ? " (sesión grupal)" : "";
+    $("confirm-text").textContent = `${prettyDate(dateOf(slot.start_at))}, ${hourOf(slot.start_at)} con ${slot.tutor_name}${kind}`;
     $("confirm").hidden = false;
   }
 
