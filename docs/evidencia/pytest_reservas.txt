@@ -1,0 +1,59 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-8.2.2, pluggy-1.7.0 -- C:\Users\diego\Desktop\Carpetas\UTP\Topicos\Proyecto2\.venv\Scripts\python.exe
+rootdir: C:\Users\diego\Desktop\Carpetas\UTP\Topicos\Proyecto2
+plugins: anyio-4.16.0
+collecting ... collected 41 items
+
+tests/test_bookings_api.py::test_reservar_espacio_libre PASSED           [  2%]
+tests/test_bookings_api.py::test_no_doble_reserva_mismo_tutor_mismo_horario PASSED [  4%]
+tests/test_bookings_api.py::test_no_doble_reserva_solape_parcial PASSED  [  7%]
+tests/test_bookings_api.py::test_sesiones_consecutivas_permitidas PASSED [  9%]
+tests/test_bookings_api.py::test_mismo_estudiante_dos_tutores_misma_hora PASSED [ 12%]
+tests/test_bookings_api.py::test_fuera_de_disponibilidad PASSED          [ 14%]
+tests/test_bookings_api.py::test_hora_pasada PASSED                      [ 17%]
+tests/test_bookings_api.py::test_materia_que_el_tutor_no_ofrece PASSED   [ 19%]
+tests/test_bookings_api.py::test_cancelar_libera_el_espacio PASSED       [ 21%]
+tests/test_bookings_api.py::test_cancelar_ajena_prohibido PASSED         [ 24%]
+tests/test_bookings_api.py::test_admin_puede_cancelar PASSED             [ 26%]
+tests/test_bookings_api.py::test_cancelar_dos_veces_rechazado PASSED     [ 29%]
+tests/test_bookings_api.py::test_sin_token_401 PASSED                    [ 31%]
+tests/test_bookings_api.py::test_nombre_con_html_rechazado PASSED        [ 34%]
+tests/test_bookings_api.py::test_email_duplicado_409 PASSED              [ 36%]
+tests/test_models.py::test_tutor_tiene_materias PASSED                   [ 39%]
+tests/test_models.py::test_estudiante_recibe_token_unico PASSED          [ 41%]
+tests/test_models.py::test_email_de_tutor_unico PASSED                   [ 43%]
+tests/test_models.py::test_reserva_por_defecto_confirmada PASSED         [ 46%]
+tests/test_models.py::test_fin_debe_ser_posterior_al_inicio PASSED       [ 48%]
+tests/test_models.py::test_estado_invalido_rechazado PASSED              [ 51%]
+tests/test_models.py::test_modelos_se_integran_con_reglas PASSED         [ 53%]
+tests/test_rules.py::test_overlap_mismo_horario PASSED                   [ 56%]
+tests/test_rules.py::test_overlap_parcial PASSED                         [ 58%]
+tests/test_rules.py::test_consecutivas_no_chocan PASSED                  [ 60%]
+tests/test_rules.py::test_separadas_no_chocan PASSED                     [ 63%]
+tests/test_rules.py::test_conflicto_mismo_horario PASSED                 [ 65%]
+tests/test_rules.py::test_conflicto_parcial PASSED                       [ 68%]
+tests/test_rules.py::test_sin_conflicto_consecutiva PASSED               [ 70%]
+tests/test_rules.py::test_cancelada_no_bloquea PASSED                    [ 73%]
+tests/test_rules.py::test_realizada_si_bloquea PASSED                    [ 75%]
+tests/test_rules.py::test_exclude_id_permite_reprogramar_a_si_misma PASSED [ 78%]
+tests/test_rules.py::test_exclude_id_no_oculta_otras PASSED              [ 80%]
+tests/test_rules.py::test_intervalo_invalido PASSED                      [ 82%]
+tests/test_rules.py::test_ventana_valida PASSED                          [ 85%]
+tests/test_rules.py::test_fuera_de_disponibilidad PASSED                 [ 87%]
+tests/test_rules.py::test_sesion_que_se_sale_del_bloque PASSED           [ 90%]
+tests/test_rules.py::test_hora_pasada PASSED                             [ 92%]
+tests/test_rules.py::test_sin_anticipacion_minima PASSED                 [ 95%]
+tests/test_rules.py::test_anticipacion_exacta_permitida PASSED           [ 97%]
+tests/test_rules.py::test_sin_disponibilidades PASSED                    [100%]
+
+============================== warnings summary ===============================
+.venv\Lib\site-packages\starlette\formparsers.py:12
+  C:\Users\diego\Desktop\Carpetas\UTP\Topicos\Proyecto2\.venv\Lib\site-packages\starlette\formparsers.py:12: PendingDeprecationWarning: Please use `import python_multipart` instead.
+    import multipart
+
+.venv\Lib\site-packages\starlette\testclient.py:41
+  C:\Users\diego\Desktop\Carpetas\UTP\Topicos\Proyecto2\.venv\Lib\site-packages\starlette\testclient.py:41: DeprecationWarning: The anyio.abc.BlockingPortal alias is deprecated, use anyio.from_thread.BlockingPortal instead.
+    [], typing.ContextManager[anyio.abc.BlockingPortal]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 41 passed, 2 warnings in 3.91s ========================
