@@ -32,7 +32,7 @@ def publish_availability(
     existing = db.query(models.Availability).filter_by(tutor_id=tutor.id).all()
     if find_conflict(data.start_at, data.end_at, existing):  # RN-12
         raise HTTPException(409, {"code": "availability_overlap", "message": "El bloque se solapa con otro ya publicado"})
-    block = models.Availability(tutor_id=tutor.id, start_at=data.start_at, end_at=data.end_at)
+    block = models.Availability(tutor_id=tutor.id, start_at=data.start_at, end_at=data.end_at, capacity=data.capacity)
     db.add(block)
     db.commit()
     return block
