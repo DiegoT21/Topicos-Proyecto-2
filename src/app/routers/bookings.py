@@ -44,6 +44,33 @@ def register_student(data: schemas.StudentCreate, db: Session = Depends(get_db))
     return student
 
 
+@router.get("/students/me", response_model=schemas.StudentPublic)
+def me(student: models.Student = Depends(current_student)):
+    """Permite a la interfaz comprobar que el token guardado sigue siendo válido."""
+    return student
+
+
+@router.get("/bookings/mine", response_model=list[schemas.AdminBookingOut])
+def my_bookings(student: models.Student = Depends(current_student), db: Session = Depends(get_db)):
+    """Reservas del estudiante (todas, con nombres), para verlas y cancelarlas desde la interfaz."""
+    B = models.Booking
+    rows = (
+        db.query(B, models.Tutor.name, models.Subject.name)
+        .join(models.Tutor, models.Tutor.id == B.tutor_id)
+        .join(models.Subject, models.Subject.id == B.subject_id)
+        .filter(B.student_id == student.id)
+        .order_by(B.start_at.desc())
+        .all()
+    )
+    return [
+        schemas.AdminBookingOut(
+            id=b.id, tutor_id=b.tutor_id, tutor_name=tn, student_id=student.id, student_name=student.name,
+            subject_id=b.subject_id, subject_name=sn, start_at=b.start_at, end_at=b.end_at, status=b.status,
+        )
+        for b, tn, sn in rows
+    ]
+
+
 @router.post("/bookings", response_model=schemas.BookingOut, status_code=201)
 def create_booking(
     data: schemas.BookingCreate, student: models.Student = Depends(current_student), db: Session = Depends(get_db)

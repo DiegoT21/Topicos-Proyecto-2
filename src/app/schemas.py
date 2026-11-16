@@ -40,6 +40,13 @@ class StudentCreate(BaseModel):
         return institutional_email(v)
 
 
+class StudentPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    email: str
+
+
 class StudentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int

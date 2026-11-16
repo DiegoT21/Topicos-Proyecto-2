@@ -1,4 +1,5 @@
 """Consultas públicas: materias, tutores y espacios libres (RF-04, RF-05, B-10)."""
+import unicodedata
 from datetime import date as date_type
 from datetime import datetime, time
 from typing import Optional
@@ -12,6 +13,11 @@ from ..database import get_db
 from ..rules import STATUS_CANCELLED, free_slots
 
 router = APIRouter(prefix="/api")
+
+
+def _sort_key(text: str) -> str:
+    """Orden alfabético en español: ignora tildes y mayúsculas ("Cálculo" antes que "Contabilidad")."""
+    return "".join(c for c in unicodedata.normalize("NFD", text) if not unicodedata.combining(c)).casefold()
 
 
 def _tutor_free_slots(db: Session, tutor_id: int, day: date_type, now: datetime) -> list[datetime]:
@@ -33,7 +39,8 @@ def _tutor_free_slots(db: Session, tutor_id: int, day: date_type, now: datetime)
 
 @router.get("/subjects", response_model=list[schemas.SubjectOut])
 def list_subjects(db: Session = Depends(get_db)):
-    return db.query(models.Subject).filter_by(active=True).order_by(models.Subject.name).all()
+    subjects = db.query(models.Subject).filter_by(active=True).all()
+    return sorted(subjects, key=lambda s: _sort_key(s.name))
 
 
 @router.get("/subjects/{subject_id}/slots", response_model=schemas.SubjectSlotsOut)
