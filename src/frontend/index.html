@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Reservar tutoría · TutoríasUTP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Unbounded:wght@600&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <p class="brand">TutoríasUTP</p>
+    <nav aria-label="Secciones">
+      <a href="index.html" aria-current="page">Reservar</a>
+      <a href="tutor.html">Soy tutor</a>
+      <a href="admin.html">Coordinación</a>
+    </nav>
+    <span class="who" id="who"></span>
+  </header>
+
+  <main>
+    <h1>Reserva una tutoría a la hora que te sirve</h1>
+    <p class="lead">Elige la materia y el día. Verás los espacios libres de todos los tutores, ordenados por hora.</p>
+
+    <!-- Acceso: solo si no hay token guardado -->
+    <section class="panel" id="access" hidden>
+      <h2>Entra con tu correo institucional</h2>
+      <form id="register-form" class="row">
+        <div class="field"><label for="name">Nombre</label><input id="name" required minlength="2" maxlength="100" autocomplete="name"></div>
+        <div class="field"><label for="email">Correo</label><input id="email" type="email" required placeholder="nombre@utp.ac.pa" autocomplete="email"></div>
+        <button type="submit">Entrar</button>
+      </form>
+      <p class="hint">Este navegador recordará tu acceso. Si cambias de navegador, pide a coordinación que te ayude a recuperarlo.</p>
+      <p class="msg" id="register-msg" role="status"></p>
+    </section>
+
+    <section class="panel" id="search" hidden>
+      <div class="booking">
+        <form id="search-form" aria-label="Buscar espacios">
+          <div class="field"><label for="subject">Materia</label><select id="subject" required></select></div>
+          <div class="field"><label for="date">Día</label><input id="date" type="date" required></div>
+          <p class="hint" id="day-label"></p>
+        </form>
+        <div>
+          <h2 id="rail-title">Espacios libres</h2>
+          <ul class="rail" id="rail" aria-live="polite"></ul>
+          <div class="confirm" id="confirm" hidden>
+            <span id="confirm-text"></span>
+            <button type="button" id="confirm-btn">Reservar</button>
+          </div>
+          <p class="msg" id="book-msg" role="status"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="mine" hidden>
+      <h2>Mis reservas</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Día</th><th>Hora</th><th>Materia</th><th>Tutor</th><th>Estado</th><th><span class="visually-hidden">Acción</span></th></tr></thead>
+          <tbody id="mine-body"></tbody>
+        </table>
+      </div>
+      <p class="empty" id="mine-empty" hidden>Aún no tienes reservas. Elige un espacio arriba para hacer la primera.</p>
+      <p class="msg" id="mine-msg" role="status"></p>
+      <button type="button" class="secondary" id="logout">Salir de este navegador</button>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  let token = store.get("student_token");
+  let chosen = null;
+  let slotsRequest = 0; // solo se pinta la última consulta: evita mezclar respuestas viejas
+
+  async function start() {
+    if (token) {
+      try {
+        const me = await api("/api/students/me", { headers: { "X-Student-Token": token } });
+        $("who").textContent = `${me.name} (${me.email})`;
+      } catch { token = null; store.del("student_token"); }
+    }
+    $("access").hidden = !!token;
+    $("search").hidden = !token;
+    $("mine").hidden = !token;
+    if (token) { await loadSubjects(); await loadMine(); }
+  }
+
+  $("register-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const s = await api("/api/students", { method: "POST", body: { name: $("name").value, email: $("email").value } });
+      token = s.token; store.set("student_token", token);
+      await start();
+    } catch (err) { show($("register-msg"), err.message, "err"); }
+  });
+
+  async function loadSubjects() {
+    const subjects = (await api("/api/subjects")).sort((a, b) => a.name.localeCompare(b.name, "es"));
+    const sel = $("subject");
+    sel.replaceChildren();
+    if (!subjects.length) { sel.append(el("option", "No hay materias disponibles", { value: "" })); return; }
+    for (const s of subjects) sel.append(el("option", s.name, { value: s.id }));
+    if (!$("date").value) $("date").value = todayLocal();
+    $("date").min = todayLocal();
+    await loadSlots();
+  }
+
+  async function loadSlots() {
+    chosen = null; $("confirm").hidden = true; $("book-msg").textContent = "";
+    const subjectId = $("subject").value, day = $("date").value;
+    const rail = $("rail");
+    const mine = ++slotsRequest;
+    rail.replaceChildren();
+    if (!subjectId || !day) return;
+    $("day-label").textContent = prettyDate(day);
+    try {
+      const data = await api(`/api/subjects/${subjectId}/slots?date=${encodeURIComponent(day)}`);
+      if (mine !== slotsRequest) return;
+      rail.replaceChildren();
+      if (!data.slots.length) {
+        rail.append(el("p", "No hay espacios libres este día. Prueba con otro día.", { class: "empty" }));
+        return;
+      }
+      const byHour = new Map();
+      for (const s of data.slots) {
+        const h = hourOf(s.start_at);
+        if (!byHour.has(h)) byHour.set(h, []);
+        byHour.get(h).push(s);
+      }
+      for (const [h, list] of byHour) {
+        const li = el("li");
+        li.append(el("span", h, { class: "hour" }));
+        const opts = el("div", null, { class: "options" });
+        for (const s of list) {
+          const group = s.capacity > 1;
+          const seats = group ? `${s.seats_left} ${s.seats_left === 1 ? "cupo" : "cupos"} de ${s.capacity}` : "";
+          const b = el("button", s.tutor_name, { type: "button", class: "slot", "aria-pressed": "false",
+            "aria-label": group ? `${h} con ${s.tutor_name}, grupal, ${seats}` : `${h} con ${s.tutor_name}` });
+          if (group) b.append(el("small", `Grupal, ${seats}`, { class: "seats" }));
+          b.addEventListener("click", () => pick(s, b));
+          opts.append(b);
+        }
+        li.append(opts);
+        rail.append(li);
+      }
+    } catch (err) { show($("book-msg"), err.message, "err"); }
+  }
+
+  function pick(slot, button) {
+    document.querySelectorAll(".slot[aria-pressed='true']").forEach((b) => b.setAttribute("aria-pressed", "false"));
+    button.setAttribute("aria-pressed", "true");
+    chosen = slot;
+    const kind = slot.capacity > 1 ? " (sesión grupal)" : "";
+    $("confirm-text").textContent = `${prettyDate(dateOf(slot.start_at))}, ${hourOf(slot.start_at)} con ${slot.tutor_name}${kind}`;
+    $("confirm").hidden = false;
+  }
+
+  $("confirm-btn").addEventListener("click", async () => {
+    if (!chosen) return;
+    $("confirm-btn").disabled = true;
+    try {
+      await api("/api/bookings", { method: "POST", headers: { "X-Student-Token": token },
+        body: { tutor_id: chosen.tutor_id, subject_id: Number($("subject").value), start_at: chosen.start_at } });
+      const done = `Reservado: ${hourOf(chosen.start_at)} con ${chosen.tutor_name}.`;
+      await loadSlots();
+      show($("book-msg"), done, "ok");
+      await loadMine();
+    } catch (err) {
+      await loadSlots(); // primero recargar: loadSlots limpia el mensaje (error encontrado en QA)
+      show($("book-msg"), err.message, "err");
+    } finally { $("confirm-btn").disabled = false; }
+  });
+
+  async function loadMine() {
+    const body = $("mine-body");
+    body.replaceChildren();
+    const rows = await api("/api/bookings/mine", { headers: { "X-Student-Token": token } });
+    $("mine-empty").hidden = rows.length > 0;
+    for (const b of rows) {
+      const tr = el("tr");
+      tr.append(el("td", prettyDate(dateOf(b.start_at))), el("td", hourOf(b.start_at)),
+        el("td", b.subject_name), el("td", b.tutor_name), el("td", b.status, { class: `status ${b.status}` }));
+      const td = el("td");
+      if (b.status === "confirmada") {
+        const c = el("button", "Cancelar", { type: "button", class: "danger" });
+        c.addEventListener("click", () => cancel(b));
+        td.append(c);
+      }
+      tr.append(td);
+      body.append(tr);
+    }
+  }
+
+  async function cancel(b) {
+    if (!confirm(`¿Cancelar la tutoría de ${b.subject_name} del ${prettyDate(dateOf(b.start_at))} a las ${hourOf(b.start_at)}?`)) return;
+    try {
+      await api(`/api/bookings/${b.id}/cancel`, { method: "POST", headers: { "X-Student-Token": token } });
+      show($("mine-msg"), "Reserva cancelada. El espacio quedó libre para otro estudiante.", "ok");
+      await loadMine(); await loadSlots();
+    } catch (err) { show($("mine-msg"), err.message, "err"); }
+  }
+
+  $("logout").addEventListener("click", () => { store.del("student_token"); token = null; $("who").textContent = ""; start(); });
+  $("subject").addEventListener("change", loadSlots);
+  $("date").addEventListener("change", loadSlots);
+  start();
+  </script>
+</body>
+</html>

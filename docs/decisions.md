@@ -29,23 +29,46 @@ Revisión de `requirements.md`, `business-rules.md` y `acceptance-criteria.md` c
 | E-07 | RN-11 exige formato de teléfono, pero el modelo no tiene teléfono | Se quita el teléfono de RN-11. En la encuesta, 3 de 5 estudiantes no quieren darlo | `business-rules.md` |
 | E-08 | La nota de `business-rules.md` dice "verificar e insertar en una misma transacción", pero el código usa un lock de proceso | Se corrige la nota: lock de proceso + verificación dentro del lock, probado con hilos (PR #14). **Limitación**: protege un solo proceso; con varios haría falta una restricción en BD | `business-rules.md` |
 | E-09 | `acceptance-criteria.md`: RN-06, RN-09, RF-01, RF-02 y RF-09 no tienen criterio; CA-12 a CA-14 están desordenados; CA-02 debe apuntar a `tests/test_double_booking.py` | Se agregan los criterios faltantes con las pruebas que ya existen y se reordena | `acceptance-criteria.md` (tras la pila) |
+| E-11 | Aplicación de E-01 a E-09 y de B-01, B-04, B-10 | Aplicadas por Diego el 2026-11-16 en la rama `fix/decisiones-victor`, sobre la rama `integracion` (que junta la pila #7–#12 con los PR de Omar y Victor). `business-rules.md`, `acceptance-criteria.md` y `api.md` pasan a **aprobado**. Pendiente: revisión de Victor | `business-rules.md`, `acceptance-criteria.md`, `api.md`, `requirements.md`, código |
 | E-10 | Varias specs siguen en "BORRADOR" | `requirements.md` pasa a **aprobado** en este issue; el resto, al aplicar E-01 a E-09 | Este PR y el siguiente |
 
 Los cambios de `requirements.md` (RF-01, RF-02, RF-03 y el backlog priorizado) se aplican en este mismo PR.
 
 ## Cambio de especificación a mitad del proyecto
+
+### Cambio solicitado (2026-11-16)
+**Origen:** el profesor no entregó un cambio propio antes del ciclo 5, así que el equipo ejecuta el **candidato 1** elegido en el issue #4 (ver tabla de candidatos más abajo). Si el profesor pide otro cambio en la presentación, se seguirá el mismo ciclo.
+
+**Pedido:** *"Las tutorías también pueden ser grupales. El tutor decide, al publicar un bloque, cuántos estudiantes caben en cada sesión (de 1 a 6). Varios estudiantes pueden reservar la misma sesión hasta llenar el cupo."*
+
+**Evidencia de que hace falta:** 6 de 8 encuestados aceptan sesiones grupales, con grupos de 3 a 6 (`specs/outcomes.md` §9).
+
+**Preguntas que el cambio obliga a responder (decididas por el equipo):**
+| ID | Pregunta | Decisión |
+|---|---|---|
+| G-01 | ¿Dónde se define el cupo? | En el **bloque de disponibilidad** (`capacity`, 1 a 6, por defecto 1). Todas las sesiones del bloque tienen ese cupo |
+| G-02 | ¿Una sesión grupal puede mezclar materias? | **No.** La primera reserva fija la materia de esa sesión; otra materia en el mismo horario es conflicto del tutor |
+| G-03 | ¿Qué pasa con RN-01 (no doble reserva del tutor)? | Se reformula: el tutor no puede tener **sesiones distintas** solapadas. Varias reservas en **la misma sesión** se permiten hasta el cupo |
+| G-04 | ¿Cambia RN-02 (estudiante)? | No. Un estudiante sigue sin poder tener dos reservas solapadas, ni dos en la misma sesión |
+| G-05 | ¿Qué ve el estudiante? | Los espacios con **cupos libres**; un espacio lleno deja de aparecer |
+| G-06 | ¿Base de datos existente? | No hay migraciones (como en el Proyecto 1): la columna nueva requiere recrear `tutorias.db` en local (`python src/seed_demo.py --reset`) |
+
 Ciclo a documentar, con evidencia (commits/PR) en cada paso:
 `cambio solicitado → actualizar spec → actualizar criterios de aceptación → actualizar plan/tareas → modificar código → modificar pruebas → ver resultados`
 
-| Paso | Evidencia (enlace a commit/PR/archivo) |
-|---|---|
-| Cambio solicitado | |
-| Spec actualizada | |
-| Criterios de aceptación | |
-| Plan / tareas | |
-| Código | |
-| Pruebas | |
-| Resultado | |
+Rama: `feature/cambio-sesiones-grupales`. Un commit por paso, en este orden:
+
+| Paso | Evidencia (commit y archivos) | Qué cambió |
+|---|---|---|
+| Cambio solicitado | `19dbd1e` · `docs/decisions.md` (sección "Cambio solicitado") | Pedido, origen, evidencia de la encuesta y decisiones G-01 a G-06 |
+| Spec actualizada | `56181aa` · `requirements.md`, `business-rules.md`, `data-model.md`, `api.md` | RF-03 y RF-06 cambian; RN-01 se reformula; **RN-13 nueva**; `capacity` en `availabilities`; API con `capacity`, `seats_left`, `session_full` |
+| Criterios de aceptación | `1a26b34` · `acceptance-criteria.md` | CA-02 se acota a cupo 1; **CA-23 a CA-28** nuevos |
+| Plan / tareas | `2585cee` · `implementation-plan.md` | Tareas T1 a T7 con archivos y criterios; riesgo sobre RN-01 |
+| Código | `506edc6` · `models.py`, `rules.py` (`seats_left`, `free_slots_with_seats`), `services.py`, `schemas.py`, `routers/*`, `frontend/*`, `seed_demo.py` | Cupo por bloque; misma sesión hasta el cupo; otra materia = conflicto; interfaz muestra cupos |
+| Pruebas | `c35c432` · `tests/test_group_sessions.py` (9 pruebas), `tests/test_rules.py` (6 de `seats_left`) | Incluye 8 hilos contra cupo 3: entran exactamente 3. **Las pruebas de doble reserva con cupo 1 no se tocaron y siguen pasando** |
+| Resultado | Este commit · `docs/evidencia/pytest_cambio_grupales.txt` (110 passed) y `docs/evidencia/prueba_interfaz.md` (pasos 10–12) | Antes del cambio: 95 pruebas; después: 110. En la interfaz, la sesión grupal de Bruno muestra "Grupal, 4 cupos de 4" y baja a 3 al reservar |
+
+**Hallazgo durante el cambio:** la primera versión del código devolvía `session_full` también en sesiones individuales, y dos pruebas de doble reserva (CA-02) fallaron. Se decidió mantener `tutor_conflict` cuando el cupo es 1, para no romper el contrato de la API que ya usaban la interfaz y las pruebas (registrado en `ai-log.md`).
 
 ### Candidatos elegidos (issue #4, parte 3)
 Si el profesor no da un cambio propio, se usa el candidato 1. Los candidatos 2 y 3 quedan de reserva. El ciclo de la tabla anterior se llena cuando se ejecute el cambio.
