@@ -1,11 +1,11 @@
 # Criterios de aceptación
 
-> Estado: **APROBADO** (2026-11-16). Aplica la decisión E-09 de `docs/decisions.md`: se agregan criterios para RN-06, RN-09, RF-01, RF-02 y RF-09, se reordena la tabla y CA-02 apunta a la suite dedicada. Formato Dado/Cuando/Entonces.
+> Estado: **APROBADO** (2026-11-16). CA-23 a CA-28 y el ajuste de CA-02 vienen del cambio de especificación de sesiones grupales. Aplica la decisión E-09 de `docs/decisions.md`: se agregan criterios para RN-06, RN-09, RF-01, RF-02 y RF-09, se reordena la tabla y CA-02 apunta a la suite dedicada. Formato Dado/Cuando/Entonces.
 
 | ID | Req / Regla | Criterio | Prueba |
 |---|---|---|---|
 | CA-01 | RF-06 | **Dado** un espacio libre de un tutor, **cuando** un estudiante lo reserva, **entonces** la reserva queda `confirmada` y el espacio deja de aparecer libre | `test_bookings_api.py`: test_reservar_espacio_libre; `test_availability_api.py`: test_reservado_desaparece_y_cancelar_lo_devuelve |
-| CA-02 | RF-07 / RN-01 | **Dado** una reserva confirmada del tutor T a las 10:00, **cuando** otro estudiante reserva a T a las 10:00, **entonces** responde 409 y no crea la reserva. Un intento a las 10:30 se rechaza (422, CA-15) y tampoco crea la reserva | **Obligatoria**: `test_double_booking.py` (mismo horario, solape parcial, hilos simultáneos); `test_bookings_api.py`: test_no_doble_reserva_mismo_tutor_mismo_horario; `test_rules.py`: overlaps / find_conflict |
+| CA-02 | RF-07 / RN-01 / RN-13 | **Dado** una reserva confirmada del tutor T a las 10:00 en un bloque de **cupo 1**, **cuando** otro estudiante reserva a T a las 10:00, **entonces** responde 409 y no crea la reserva. Un intento a las 10:30 se rechaza (422, CA-15) y tampoco crea la reserva | **Obligatoria**: `test_double_booking.py` (mismo horario, solape parcial, hilos simultáneos); `test_bookings_api.py`: test_no_doble_reserva_mismo_tutor_mismo_horario; `test_rules.py`: overlaps / find_conflict |
 | CA-03 | RN-01 | **Dado** una sesión 10:00–11:00, **cuando** se reserva 11:00–12:00 con el mismo tutor, **entonces** se permite (intervalo semiabierto) | `test_double_booking.py`, `test_bookings_api.py`: test_sesiones_consecutivas_permitidas |
 | CA-04 | RN-02 | **Dado** un estudiante con sesión a las 10:00 con el tutor A, **cuando** intenta reservar a las 10:00 (o 10:30, si el tutor B tiene ese espacio) con el tutor B, **entonces** 409 | `test_double_booking.py`; `test_bookings_api.py`: test_mismo_estudiante_dos_tutores_misma_hora, test_estudiante_solape_parcial_con_otro_tutor |
 | CA-05 | RN-03 | **Cuando** se reserva fuera de los bloques publicados por el tutor, **entonces** 422 | `test_bookings_api.py`: test_fuera_de_disponibilidad |
@@ -26,3 +26,9 @@
 | CA-20 | RF-01 | **Cuando** el admin crea una materia, aparece en la lista pública; **cuando** la desactiva, deja de aparecer; sin token de admin, 401 | `test_availability_api.py`: test_materia_desactivada_no_se_lista, test_admin_requiere_token, test_materia_duplicada_409 |
 | CA-21 | RF-02 | **Cuando** el admin registra un tutor con sus materias, recibe su token; con una materia inexistente, 422; con correo repetido, 409 | `test_availability_api.py`: test_tutor_devuelve_token_y_no_se_filtra_en_lista, test_tutor_con_materia_inexistente_422, test_tutor_email_duplicado_409 |
 | CA-22 | RF-09 | **Cuando** el tutor consulta su agenda con su token, ve sus reservas; sin token, 401 | `test_availability_api.py`: test_agenda_del_tutor |
+| CA-23 | RN-13 (cambio) | **Dado** un bloque con cupo 3, **cuando** tres estudiantes reservan la misma sesión, **entonces** las tres quedan `confirmada`; **cuando** un cuarto lo intenta, **entonces** 409 `session_full` | _pendiente (paso 6)_ |
+| CA-24 | RN-13 (cambio) | **Dado** una sesión con cupo 3 y una reserva, **cuando** se consultan los espacios, **entonces** la sesión aparece con 2 cupos libres; llena, deja de aparecer; al cancelar una reserva vuelve a aparecer | _pendiente (paso 6)_ |
+| CA-25 | RN-01 / G-02 (cambio) | **Dado** una sesión grupal tomada para Cálculo, **cuando** otro estudiante intenta reservarla para Física con el mismo tutor, **entonces** 409 `tutor_conflict`, y la sesión no aparece en los espacios de Física | _pendiente (paso 6)_ |
+| CA-26 | RN-02 / G-04 (cambio) | **Cuando** un estudiante intenta reservar dos veces la misma sesión grupal, **entonces** 409 `student_conflict` | _pendiente (paso 6)_ |
+| CA-27 | RF-03 / RN-13 (cambio) | **Cuando** el tutor publica un bloque con cupo 0 o 7, **entonces** 422; sin cupo, el bloque queda con cupo 1 | _pendiente (paso 6)_ |
+| CA-28 | RN-13 (cambio) | **Dado** una sesión con cupo 3, **cuando** 8 estudiantes reservan a la vez (hilos), **entonces** exactamente 3 quedan confirmadas | _pendiente (paso 6)_ |
