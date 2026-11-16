@@ -47,7 +47,11 @@ Lo no cubierto es sobre todo arranque (`main.py` lifespan, `database.get_db` rea
 `docs/evidencia/prueba_interfaz.md`: 12 pasos en Chromium (navegador integrado de la app de escritorio) contra `scripts/run_demo.py`, incluidos los de sesiones grupales. **Las ejecutó Claude Code (IA) por encargo de Diego**, no una persona distinta del desarrollador.
 
 ## QA independiente
-**Pendiente.** Nadie distinto de quien escribió la interfaz la ha probado a mano. Propuesta: Omar o Victor sigue `docs/evidencia/prueba_interfaz.md` en su máquina, anota navegador, fecha y resultado de cada paso en una tabla nueva aquí, y adjunta capturas en `docs/evidencia/qa/`.
+**No se realizó QA independiente.** Omar (rol QA) no pudo hacerlo antes de la entrega y el equipo decidió entregar igualmente, dejándolo dicho aquí.
+
+En su lugar hay una **QA funcional hecha por IA** (Claude Code, por encargo de Diego) en Chrome, con 19 pasos sobre las tres pantallas: `docs/evidencia/qa/qa_ia_2026-11-16.md`. Encontró **2 errores de la interfaz** (un mensaje de rechazo que se borraba y un `alert()` bloqueante), ambos corregidos; las 110 pruebas siguen pasando. No hay capturas: la extensión del navegador no pudo tomarlas.
+
+Esto no reemplaza la revisión de una persona distinta al desarrollador: sigue siendo una limitación de la entrega.
 
 ## Limitaciones conocidas
 - El lock contra reservas simultáneas protege **un solo proceso** (E-08).
