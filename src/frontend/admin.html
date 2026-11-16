@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Coordinación · TutoríasUTP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Unbounded:wght@600&display=swap">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <p class="brand">TutoríasUTP</p>
+    <nav aria-label="Secciones">
+      <a href="index.html">Reservar</a>
+      <a href="tutor.html">Soy tutor</a>
+      <a href="admin.html" aria-current="page">Coordinación</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Coordinación de tutorías</h1>
+    <p class="lead">Gestiona materias y tutores, y revisa todas las reservas.</p>
+
+    <section class="panel" id="access">
+      <h2>Clave de coordinación</h2>
+      <form id="token-form" class="row">
+        <div class="field"><label for="token">Clave</label><input id="token" type="password" required autocomplete="off"></div>
+        <button type="submit">Entrar</button>
+      </form>
+      <p class="msg" id="access-msg" role="status"></p>
+    </section>
+
+    <div id="work" hidden>
+      <section class="panel">
+        <h2>Materias</h2>
+        <form id="subject-form" class="row">
+          <div class="field"><label for="subject-name">Nueva materia</label><input id="subject-name" required minlength="2" maxlength="100"></div>
+          <button type="submit">Agregar materia</button>
+        </form>
+        <ul id="subject-list" class="list"></ul>
+        <p class="msg" id="subject-msg" role="status"></p>
+      </section>
+
+      <section class="panel">
+        <h2>Registrar tutor</h2>
+        <form id="tutor-form">
+          <div class="row">
+            <div class="field"><label for="tutor-name">Nombre</label><input id="tutor-name" required minlength="2" maxlength="100"></div>
+            <div class="field"><label for="tutor-email">Correo</label><input id="tutor-email" type="email" required placeholder="nombre@utp.ac.pa"></div>
+          </div>
+          <fieldset class="field" style="border:0;padding:0;margin:14px 0">
+            <legend style="font-weight:700;font-size:.92rem">Materias que ofrece</legend>
+            <div id="tutor-subjects" class="row"></div>
+          </fieldset>
+          <button type="submit">Registrar tutor</button>
+        </form>
+        <p class="msg" id="tutor-msg" role="status"></p>
+        <div id="tutor-token" hidden>
+          <p>Entrega este código al tutor. Solo se muestra esta vez.</p>
+          <code class="token" id="tutor-token-value"></code>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Reservas</h2>
+        <form id="filter-form" class="row">
+          <div class="field"><label for="f-status">Estado</label>
+            <select id="f-status"><option value="">Todos</option><option>confirmada</option><option>cancelada</option><option>realizada</option></select></div>
+          <div class="field"><label for="f-subject">Materia</label><select id="f-subject"><option value="">Todas</option></select></div>
+          <div class="field"><label for="f-from">Desde</label><input id="f-from" type="date"></div>
+          <div class="field"><label for="f-to">Hasta</label><input id="f-to" type="date"></div>
+          <button type="submit">Filtrar</button>
+        </form>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Día</th><th>Hora</th><th>Materia</th><th>Tutor</th><th>Estudiante</th><th>Estado</th><th><span class="visually-hidden">Acción</span></th></tr></thead>
+            <tbody id="bookings"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="bookings-empty" hidden>Ninguna reserva cumple estos filtros.</p>
+        <p class="msg" id="bookings-msg" role="status"></p>
+      </section>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+  <script>
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  let token = store.get("admin_token");
+  const H = () => ({ "X-Admin-Token": token });
+
+  async function start() {
+    if (!token) { $("access").hidden = false; $("work").hidden = true; return; }
+    try {
+      await loadBookings();
+      $("access").hidden = true; $("work").hidden = false;
+      await loadSubjects();
+    } catch (err) {
+      store.del("admin_token"); token = null;
+      $("access").hidden = false; $("work").hidden = true;
+      show($("access-msg"), err.message, "err");
+    }
+  }
+
+  $("token-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    token = $("token").value; store.set("admin_token", token); start();
+  });
+
+  async function loadSubjects() {
+    const list = await api("/api/subjects");
+    const ul = $("subject-list"), box = $("tutor-subjects"), filter = $("f-subject");
+    ul.replaceChildren(); box.replaceChildren();
+    filter.replaceChildren(el("option", "Todas", { value: "" }));
+    for (const s of list) {
+      const li = el("li");
+      li.append(el("span", s.name));
+      const off = el("button", "Desactivar", { type: "button", class: "secondary" });
+      off.addEventListener("click", async () => {
+        try { await api(`/api/admin/subjects/${s.id}`, { method: "DELETE", headers: H() });
+          show($("subject-msg"), `Materia desactivada: ${s.name}.`, "ok"); loadSubjects(); }
+        catch (err) { show($("subject-msg"), err.message, "err"); }
+      });
+      li.append(off); ul.append(li);
+      const id = `sub-${s.id}`;
+      const wrap = el("div");
+      const cb = el("input", null, { type: "checkbox", id, value: s.id });
+      cb.style.width = "auto";
+      const lab = el("label", s.name, { for: id });
+      lab.style.display = "inline"; lab.style.fontWeight = "400"; lab.style.marginLeft = "6px";
+      wrap.append(cb, lab); box.append(wrap);
+      filter.append(el("option", s.name, { value: s.id }));
+    }
+    if (!list.length) ul.append(el("li", "Aún no hay materias. Agrega la primera."));
+  }
+
+  $("subject-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const s = await api("/api/admin/subjects", { method: "POST", headers: H(), body: { name: $("subject-name").value } });
+      show($("subject-msg"), `Materia agregada: ${s.name}.`, "ok");
+      $("subject-name").value = ""; loadSubjects();
+    } catch (err) { show($("subject-msg"), err.message, "err"); }
+  });
+
+  $("tutor-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const ids = [...document.querySelectorAll("#tutor-subjects input:checked")].map((c) => Number(c.value));
+    try {
+      const t = await api("/api/admin/tutors", { method: "POST", headers: H(),
+        body: { name: $("tutor-name").value, email: $("tutor-email").value, subject_ids: ids } });
+      show($("tutor-msg"), `Tutor registrado: ${t.name}.`, "ok");
+      $("tutor-token-value").textContent = t.token; $("tutor-token").hidden = false;
+      e.target.reset();
+    } catch (err) { show($("tutor-msg"), err.message, "err"); $("tutor-token").hidden = true; }
+  });
+
+  async function loadBookings() {
+    const p = new URLSearchParams();
+    if ($("f-status").value) p.set("status", $("f-status").value);
+    if ($("f-subject").value) p.set("subject_id", $("f-subject").value);
+    if ($("f-from").value) p.set("date_from", $("f-from").value);
+    if ($("f-to").value) p.set("date_to", $("f-to").value);
+    const rows = await api(`/api/admin/bookings?${p}`, { headers: H() });
+    const body = $("bookings");
+    body.replaceChildren();
+    $("bookings-empty").hidden = rows.length > 0;
+    for (const b of rows) {
+      const tr = el("tr");
+      tr.append(el("td", prettyDate(dateOf(b.start_at))), el("td", hourOf(b.start_at)), el("td", b.subject_name),
+        el("td", b.tutor_name), el("td", b.student_name), el("td", b.status, { class: `status ${b.status}` }));
+      const td = el("td");
+      if (b.status === "confirmada") {
+        const c = el("button", "Cancelar", { type: "button", class: "danger" });
+        c.addEventListener("click", async () => {
+          if (!confirm(`¿Cancelar la reserva de ${b.student_name}?`)) return;
+          try { await api(`/api/bookings/${b.id}/cancel`, { method: "POST", headers: H() });
+            show($("bookings-msg"), "Reserva cancelada.", "ok"); loadBookings(); }
+          catch (err) { show($("bookings-msg"), err.message, "err"); }
+        });
+        td.append(c);
+      }
+      tr.append(td); body.append(tr);
+    }
+  }
+
+  $("filter-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try { await loadBookings(); $("bookings-msg").textContent = ""; }
+    catch (err) { show($("bookings-msg"), err.message, "err"); }
+  });
+
+  start();
+  </script>
+</body>
+</html>
