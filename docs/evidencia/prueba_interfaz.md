@@ -15,6 +15,15 @@
 | 8 | Soy tutor | Entrar con el código de Ana y publicar el viernes 20, 12:00–13:00 | "Bloque publicado: viernes, 20 de noviembre, de 12:00 a 13:00." |
 | 9 | Soy tutor | Publicar el mismo bloque otra vez | "El bloque se solapa con otro ya publicado" (CA-14) |
 
+## Después del cambio de especificación (sesiones grupales), misma fecha
+Base recreada con `python src/seed_demo.py --reset` (Bruno Díaz tiene un bloque grupal con cupo 4).
+
+| # | Pantalla | Paso | Resultado observado |
+|---|---|---|---|
+| 10 | Reservar | Cálculo I, martes 17 de noviembre | Bruno aparece a las 10:00, 11:00 y 12:00 con "Grupal, 4 cupos de 4"; los tutores individuales se ven como antes |
+| 11 | Reservar | Elegir 10:00 con Bruno → Reservar | Barra: "martes, 17 de noviembre, 10:00 con Bruno Díaz (sesión grupal)"; mensaje "Reservado: 10:00 con Bruno Díaz." |
+| 12 | Reservar | Ver el riel después de reservar | 10:00 con Bruno sigue visible con "Grupal, 3 cupos de 4" (CA-24) |
+
 ## Errores encontrados y corregidos durante la prueba
 - **Carrera al cambiar materia y día seguidos**: una respuesta vieja (vacía) se pintaba junto con la nueva y el riel mostraba "No hay espacios libres" encima de las horas. Se corrigió descartando respuestas que no son la última consulta (`slotsRequest` en `index.html`).
 - **Orden de materias**: "Contabilidad" salía antes que "Cálculo I" (orden por bytes). Se corrigió ordenando sin tildes (`_sort_key` en `catalog.py`).

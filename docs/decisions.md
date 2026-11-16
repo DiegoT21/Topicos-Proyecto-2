@@ -56,15 +56,19 @@ Los cambios de `requirements.md` (RF-01, RF-02, RF-03 y el backlog priorizado) s
 Ciclo a documentar, con evidencia (commits/PR) en cada paso:
 `cambio solicitado → actualizar spec → actualizar criterios de aceptación → actualizar plan/tareas → modificar código → modificar pruebas → ver resultados`
 
-| Paso | Evidencia (enlace a commit/PR/archivo) |
-|---|---|
-| Cambio solicitado | |
-| Spec actualizada | |
-| Criterios de aceptación | |
-| Plan / tareas | |
-| Código | |
-| Pruebas | |
-| Resultado | |
+Rama: `feature/cambio-sesiones-grupales`. Un commit por paso, en este orden:
+
+| Paso | Evidencia (commit y archivos) | Qué cambió |
+|---|---|---|
+| Cambio solicitado | `19dbd1e` · `docs/decisions.md` (sección "Cambio solicitado") | Pedido, origen, evidencia de la encuesta y decisiones G-01 a G-06 |
+| Spec actualizada | `56181aa` · `requirements.md`, `business-rules.md`, `data-model.md`, `api.md` | RF-03 y RF-06 cambian; RN-01 se reformula; **RN-13 nueva**; `capacity` en `availabilities`; API con `capacity`, `seats_left`, `session_full` |
+| Criterios de aceptación | `1a26b34` · `acceptance-criteria.md` | CA-02 se acota a cupo 1; **CA-23 a CA-28** nuevos |
+| Plan / tareas | `2585cee` · `implementation-plan.md` | Tareas T1 a T7 con archivos y criterios; riesgo sobre RN-01 |
+| Código | `506edc6` · `models.py`, `rules.py` (`seats_left`, `free_slots_with_seats`), `services.py`, `schemas.py`, `routers/*`, `frontend/*`, `seed_demo.py` | Cupo por bloque; misma sesión hasta el cupo; otra materia = conflicto; interfaz muestra cupos |
+| Pruebas | `c35c432` · `tests/test_group_sessions.py` (9 pruebas), `tests/test_rules.py` (6 de `seats_left`) | Incluye 8 hilos contra cupo 3: entran exactamente 3. **Las pruebas de doble reserva con cupo 1 no se tocaron y siguen pasando** |
+| Resultado | Este commit · `docs/evidencia/pytest_cambio_grupales.txt` (110 passed) y `docs/evidencia/prueba_interfaz.md` (pasos 10–12) | Antes del cambio: 95 pruebas; después: 110. En la interfaz, la sesión grupal de Bruno muestra "Grupal, 4 cupos de 4" y baja a 3 al reservar |
+
+**Hallazgo durante el cambio:** la primera versión del código devolvía `session_full` también en sesiones individuales, y dos pruebas de doble reserva (CA-02) fallaron. Se decidió mantener `tutor_conflict` cuando el cupo es 1, para no romper el contrato de la API que ya usaban la interfaz y las pruebas (registrado en `ai-log.md`).
 
 ### Candidatos elegidos (issue #4, parte 3)
 Si el profesor no da un cambio propio, se usa el candidato 1. Los candidatos 2 y 3 quedan de reserva. El ciclo de la tabla anterior se llena cuando se ejecute el cambio.
