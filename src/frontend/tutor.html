@@ -29,6 +29,7 @@
         <button type="submit">Usar este código</button>
       </form>
       <p class="hint">Coordinación te entrega este código al registrarte.</p>
+      <p class="msg" id="access-msg" role="status"></p>
     </section>
 
     <section class="panel" id="publish" hidden>
@@ -75,7 +76,7 @@
       await loadAgenda();
     } catch (err) {
       store.del("tutor_token"); token = null; start();
-      alert(err.message);
+      show($("access-msg"), `${err.message}. Revisa el código que te dio coordinación.`, "err"); // antes: alert() bloqueante (QA)
     }
   }
 
