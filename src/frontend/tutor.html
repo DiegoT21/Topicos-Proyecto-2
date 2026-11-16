@@ -29,6 +29,7 @@
         <button type="submit">Usar este código</button>
       </form>
       <p class="hint">Coordinación te entrega este código al registrarte.</p>
+      <p class="msg" id="access-msg" role="status"></p>
     </section>
 
     <section class="panel" id="publish" hidden>
@@ -37,6 +38,8 @@
         <div class="field"><label for="day">Día</label><input id="day" type="date" required></div>
         <div class="field"><label for="from">Desde</label><input id="from" type="time" step="900" required value="09:00"></div>
         <div class="field"><label for="to">Hasta</label><input id="to" type="time" step="900" required value="12:00"></div>
+        <div class="field"><label for="capacity">Estudiantes por sesión</label>
+          <select id="capacity"><option value="1">1 (individual)</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
         <button type="submit">Publicar bloque</button>
       </form>
       <p class="msg" id="block-msg" role="status"></p>
@@ -73,7 +76,7 @@
       await loadAgenda();
     } catch (err) {
       store.del("tutor_token"); token = null; start();
-      alert(err.message);
+      show($("access-msg"), `${err.message}. Revisa el código que te dio coordinación.`, "err"); // antes: alert() bloqueante (QA)
     }
   }
 
@@ -87,8 +90,9 @@
     const day = $("day").value;
     try {
       await api("/api/tutor/availability", { method: "POST", headers: { "X-Tutor-Token": token },
-        body: { start_at: `${day}T${$("from").value}:00`, end_at: `${day}T${$("to").value}:00` } });
-      show($("block-msg"), `Bloque publicado: ${prettyDate(day)}, de ${$("from").value} a ${$("to").value}.`, "ok");
+        body: { start_at: `${day}T${$("from").value}:00`, end_at: `${day}T${$("to").value}:00`, capacity: Number($("capacity").value) } });
+      const cupo = $("capacity").value === "1" ? "individual" : `grupal, ${$("capacity").value} estudiantes por sesión`;
+      show($("block-msg"), `Bloque publicado: ${prettyDate(day)}, de ${$("from").value} a ${$("to").value} (${cupo}).`, "ok");
     } catch (err) { show($("block-msg"), err.message, "err"); }
   });
 

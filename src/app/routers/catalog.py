@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from .. import models, schemas
 from ..config import local_now, settings
 from ..database import get_db
-from ..rules import STATUS_CANCELLED, free_slots
+from ..rules import STATUS_CANCELLED, free_slots_with_seats
 
 router = APIRouter(prefix="/api")
 
@@ -20,7 +20,8 @@ def _sort_key(text: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", text) if not unicodedata.combining(c)).casefold()
 
 
-def _tutor_free_slots(db: Session, tutor_id: int, day: date_type, now: datetime) -> list[datetime]:
+def _tutor_free_slots(db: Session, tutor_id: int, day: date_type, now: datetime, subject_id: Optional[int] = None):
+    """Lista de (inicio, cupos_libres, cupo) con cupo para el tutor en ese día (RF-05, RN-13)."""
     day_start, day_end = datetime.combine(day, time.min), datetime.combine(day, time.max)
     blocks = (
         db.query(models.Availability)
@@ -34,7 +35,7 @@ def _tutor_free_slots(db: Session, tutor_id: int, day: date_type, now: datetime)
                 models.Booking.start_at >= day_start, models.Booking.start_at <= day_end)
         .all()
     )
-    return free_slots(day, blocks, bookings, settings.session_minutes, now, settings.min_notice_minutes)
+    return free_slots_with_seats(day, blocks, bookings, settings.session_minutes, now, settings.min_notice_minutes, subject_id)
 
 
 @router.get("/subjects", response_model=list[schemas.SubjectOut])
@@ -59,9 +60,9 @@ def subject_slots(subject_id: int, date: date_type, db: Session = Depends(get_db
     )
     now = local_now()
     slots = [
-        {"tutor_id": tu.id, "tutor_name": tu.name, "start_at": s}
+        {"tutor_id": tu.id, "tutor_name": tu.name, "start_at": s, "seats_left": left, "capacity": cap}
         for tu in tutors
-        for s in _tutor_free_slots(db, tu.id, date, now)
+        for s, left, cap in _tutor_free_slots(db, tu.id, date, now, subject_id)
     ]
     slots.sort(key=lambda x: (x["start_at"], x["tutor_name"], x["tutor_id"]))
     return {"subject_id": subject_id, "date": date.isoformat(), "session_minutes": settings.session_minutes, "slots": slots}
@@ -80,5 +81,7 @@ def tutor_slots(tutor_id: int, date: date_type, db: Session = Depends(get_db)):
     tutor = db.get(models.Tutor, tutor_id)
     if tutor is None or not tutor.active:
         raise HTTPException(404, {"code": "tutor_not_found", "message": "Tutor no encontrado"})
-    slots = _tutor_free_slots(db, tutor_id, date, local_now())
-    return {"tutor_id": tutor_id, "date": date.isoformat(), "session_minutes": settings.session_minutes, "slots": slots}
+    seats = _tutor_free_slots(db, tutor_id, date, local_now())
+    return {"tutor_id": tutor_id, "date": date.isoformat(), "session_minutes": settings.session_minutes,
+            "slots": [s for s, _, _ in seats],
+            "seats": [{"start_at": s, "seats_left": left, "capacity": cap} for s, left, cap in seats]}

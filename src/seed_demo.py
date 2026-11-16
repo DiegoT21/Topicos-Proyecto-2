@@ -19,7 +19,7 @@ from app.database import Base, SessionLocal, engine  # noqa: E402
 SUBJECTS = ["Cálculo I", "Física I", "Programación I", "Contabilidad"]
 TUTORS = [
     ("Ana Pérez", "ana.perez@utp.ac.pa", ["Cálculo I", "Física I"], [(9, 12), (14, 16)]),
-    ("Bruno Díaz", "bruno.diaz@utp.ac.pa", ["Cálculo I"], [(10, 13)]),
+    ("Bruno Díaz", "bruno.diaz@utp.ac.pa", ["Cálculo I"], [(10, 13, 4)]),  # grupal, cupo 4
     ("Carla Ríos", "carla.rios@utp.ac.pa", ["Programación I"], [(13, 17)]),
     ("Darío Vega", "dario.vega@utp.ac.pa", ["Contabilidad", "Cálculo I"], [(8, 10), (17, 19)]),
 ]
@@ -42,9 +42,9 @@ def main(reset: bool) -> None:
             db.flush()
             for offset in range(1, 6):  # desde mañana, 5 días
                 day = today + timedelta(days=offset)
-                for start, end in blocks:
+                for start, end, *cap in blocks:
                     db.add(models.Availability(tutor_id=tutor.id, start_at=datetime.combine(day, time(start)),
-                                               end_at=datetime.combine(day, time(end))))
+                                               end_at=datetime.combine(day, time(end)), capacity=cap[0] if cap else 1))
             print(f"Tutor {name:<12} código: {tutor.token}")
         db.commit()
     print("Listo. Datos ficticios de demostración.")

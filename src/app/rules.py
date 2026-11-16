@@ -85,26 +85,51 @@ def validate_slot_alignment(start: datetime, availabilities: Iterable[_HasInterv
             return
 
 
-def free_slots(
+def seats_left(start: datetime, end: datetime, capacity: int, bookings: Iterable, subject_id: Optional[int] = None) -> int:
+    """Cupos libres de la sesión [start, end) de un tutor (RN-01 reformulada + RN-13, cambio 2026-11-16).
+
+    - Solo cuentan reservas activas (no canceladas) que se solapan con la sesión.
+    - Si alguna se solapa sin ser **la misma sesión** (otro inicio u otro fin), el tutor está ocupado: 0.
+    - Si `subject_id` se indica y la sesión ya tiene otra materia (G-02), tampoco hay cupo: 0.
+    - Si no, quedan `capacity - reservas de esa sesión` (nunca negativo).
+    Con capacity = 1 equivale a la regla original: una reserva ocupa el espacio.
+    """
+    taken = 0
+    for b in bookings:
+        if getattr(b, "status", STATUS_CONFIRMED) == STATUS_CANCELLED:
+            continue
+        if not overlaps(start, end, b.start_at, b.end_at):
+            continue
+        if b.start_at != start or b.end_at != end:
+            return 0
+        if subject_id is not None and getattr(b, "subject_id", subject_id) != subject_id:
+            return 0
+        taken += 1
+    return max(capacity - taken, 0)
+
+
+def free_slots_with_seats(
     day: date,
     availabilities: Iterable[_HasInterval],
     bookings: Iterable,
     session_minutes: int,
     now: datetime,
     min_notice_min: int = 60,
-) -> list[datetime]:
-    """Horas de inicio libres de un tutor en `day` (RF-05).
+    subject_id: Optional[int] = None,
+) -> list[tuple[datetime, int, int]]:
+    """Sesiones con cupo de un tutor en `day`: lista de (inicio, cupos_libres, cupo_total).
 
-    Parte cada bloque de disponibilidad en sesiones consecutivas de `session_minutes`, y descarta
-    las que no cumplen RN-04 (pasado / sin anticipación) o chocan con reservas activas (RN-01).
+    Parte cada bloque en sesiones de `session_minutes`, descarta las que no cumplen RN-04 y las que
+    no tienen cupo según `seats_left`. El cupo sale del bloque (`capacity`, 1 si no existe).
     Se asume que cada bloque empieza y termina el mismo día.
     """
     delta = timedelta(minutes=session_minutes)
     bookings = list(bookings)
-    slots: list[datetime] = []
+    result: list[tuple[datetime, int, int]] = []
     for block in sorted(availabilities, key=lambda a: a.start_at):
         if block.start_at.date() != day:
             continue
+        capacity = getattr(block, "capacity", 1) or 1
         cur = block.start_at
         while cur + delta <= block.end_at:
             end = cur + delta
@@ -113,10 +138,23 @@ def free_slots(
             except BookingRuleError:
                 cur = end
                 continue
-            if find_conflict(cur, end, bookings) is None:
-                slots.append(cur)
+            left = seats_left(cur, end, capacity, bookings, subject_id)
+            if left > 0:
+                result.append((cur, left, capacity))
             cur = end
-    return slots
+    return result
+
+
+def free_slots(
+    day: date,
+    availabilities: Iterable[_HasInterval],
+    bookings: Iterable,
+    session_minutes: int,
+    now: datetime,
+    min_notice_min: int = 60,
+) -> list[datetime]:
+    """Horas de inicio con cupo de un tutor en `day` (RF-05). Ver `free_slots_with_seats`."""
+    return [s for s, _, _ in free_slots_with_seats(day, availabilities, bookings, session_minutes, now, min_notice_min)]
 
 
 def validate_booking_window(

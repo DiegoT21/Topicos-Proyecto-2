@@ -196,3 +196,6 @@ th { color: var(--muted); font-weight: 700; }
 }
 .list li:last-child { border-bottom: 1px solid var(--line); }
 .list button { padding: 5px 12px; font-size: 0.9rem; }
+
+/* Sesión grupal (RN-13): el cupo se lee dentro del mismo botón */
+.slot .seats { display: block; font-weight: 400; font-size: 0.8rem; }

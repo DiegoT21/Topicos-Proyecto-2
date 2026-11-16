@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api")
 
 # código de regla -> HTTP (api.md: 409 conflicto, 422 validación, 403 permiso, 404 no existe)
 _STATUS = {
-    "tutor_conflict": 409, "student_conflict": 409, "invalid_transition": 409,
+    "tutor_conflict": 409, "session_full": 409, "student_conflict": 409, "invalid_transition": 409,
     "forbidden": 403,
     "tutor_not_found": 404, "subject_not_found": 404, "booking_not_found": 404,
 }

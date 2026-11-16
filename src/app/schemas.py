@@ -118,6 +118,7 @@ class TutorCreatedOut(TutorPublic):
 class AvailabilityCreate(BaseModel):
     start_at: datetime
     end_at: datetime
+    capacity: int = Field(1, ge=1, le=6)  # RN-13: cupo por sesión (1 = individual)
 
     @field_validator("start_at", "end_at")
     @classmethod
@@ -133,12 +134,15 @@ class AvailabilityOut(BaseModel):
     tutor_id: int
     start_at: datetime
     end_at: datetime
+    capacity: int
 
 
 class SubjectSlot(BaseModel):
     tutor_id: int
     tutor_name: str
     start_at: datetime
+    seats_left: int  # RN-13
+    capacity: int
 
 
 class SubjectSlotsOut(BaseModel):
@@ -150,11 +154,18 @@ class SubjectSlotsOut(BaseModel):
     slots: list[SubjectSlot]
 
 
+class SlotSeats(BaseModel):
+    start_at: datetime
+    seats_left: int
+    capacity: int
+
+
 class SlotsOut(BaseModel):
     tutor_id: int
     date: str
     session_minutes: int
     slots: list[datetime]
+    seats: list[SlotSeats]  # mismo orden que `slots`, con cupos (RN-13)
 
 
 class BookingCreate(BaseModel):
