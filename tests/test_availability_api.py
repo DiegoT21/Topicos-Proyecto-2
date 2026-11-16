@@ -1,19 +1,9 @@
 """Pruebas de disponibilidad, catálogo, admin y flujo completo (ciclo 3). Cubren CA-11, CA-13, CA-14."""
-import sys
 from datetime import datetime
-from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from app.config import settings  # noqa: E402
-from app.database import Base, get_db  # noqa: E402
-from app.main import app  # noqa: E402
+from app.config import settings
 
 ADMIN = {"X-Admin-Token": settings.admin_token}
 
@@ -23,21 +13,8 @@ def t(h, m=0, day=5):
 
 
 @pytest.fixture()
-def c():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine, expire_on_commit=False)
-
-    def override():
-        s = Session()
-        try:
-            yield s
-        finally:
-            s.close()
-
-    app.dependency_overrides[get_db] = override
-    yield TestClient(app)
-    app.dependency_overrides.clear()
+def c(client):
+    return client
 
 
 def subject(c, name="Cálculo I"):

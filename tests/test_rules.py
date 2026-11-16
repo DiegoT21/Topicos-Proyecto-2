@@ -1,14 +1,10 @@
 """Pruebas unitarias del núcleo de reglas. Cubren CA-02, CA-03, CA-05, CA-06, CA-09 (parte pura)."""
-import sys
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from app.rules import (  # noqa: E402
+from app.rules import (
     BookingRuleError,
     Interval,
     find_conflict,
@@ -123,9 +119,9 @@ def test_sin_disponibilidades():
 
 
 # --- free_slots (RF-05) ---
-from datetime import date  # noqa: E402
+from datetime import date
 
-from app.rules import free_slots  # noqa: E402
+from app.rules import free_slots
 
 DAY = date(2026, 12, 1)
 

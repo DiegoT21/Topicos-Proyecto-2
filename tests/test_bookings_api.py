@@ -1,20 +1,10 @@
 """Pruebas de API de reservar y cancelar. Cubren CA-01, CA-02, CA-03, CA-04, CA-05, CA-06, CA-07, CA-08, CA-10."""
-import sys
 from datetime import datetime
-from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-
-from app import models  # noqa: E402
-from app.config import settings  # noqa: E402
-from app.database import Base, get_db  # noqa: E402
-from app.main import app  # noqa: E402
+from app import models
+from app.config import settings
 
 
 def t(h, m=0):
@@ -22,20 +12,8 @@ def t(h, m=0):
 
 
 @pytest.fixture()
-def env():
-    engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine, expire_on_commit=False)
-
-    def override():
-        s = Session()
-        try:
-            yield s
-        finally:
-            s.close()
-
-    app.dependency_overrides[get_db] = override
-    s = Session()
+def env(session_factory, client):
+    s = session_factory()
     math = models.Subject(name="Cálculo I")
     physics = models.Subject(name="Física")
     ana = models.Tutor(name="Ana", email="ana@utp.ac.pa", subjects=[math])
@@ -45,11 +23,9 @@ def env():
     for tutor in (ana, bea):  # ambos disponibles 9:00-13:00
         s.add(models.Availability(tutor_id=tutor.id, start_at=datetime(2099, 1, 5, 9), end_at=datetime(2099, 1, 5, 13)))
     s.commit()
-    client = TestClient(app)
     ids = {"math": math.id, "physics": physics.id, "ana": ana.id, "bea": bea.id}
     s.close()
     yield client, ids
-    app.dependency_overrides.clear()
 
 
 def register(client, name, email):
